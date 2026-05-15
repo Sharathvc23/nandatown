@@ -69,13 +69,6 @@ Test conformance:
 nest plugins conform my_pkg
 ```
 
-## What NEST is not
-
-- **Not a production agent runtime.** It's a sandbox. Real deployments use NANDA + Maritime + your real registry.
-- **Not opinionated about protocols.** NEST doesn't tell you what a good payment protocol looks like. It tells you whether yours works.
-- **Not a benchmarking competition.** Scenarios are tools for self-evaluation; no leaderboards.
-- **Not tied to a specific LLM.** Tier 2 uses litellm; Tier 1 needs no LLM at all.
-
 ## Project structure
 
 ```
