@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -17,11 +16,13 @@ interface TocItem {
 /* ------------------------------------------------------------------ */
 
 const TOC: TocItem[] = [
-  { id: 'getting-started', label: 'Getting Started' },
+  { id: 'overview', label: 'Overview' },
+  { id: 'tiers', label: 'Tier 1 vs Tier 2' },
   { id: 'installation', label: 'Installation' },
   { id: 'first-experiment', label: 'Your First Experiment' },
-  { id: 'scenarios', label: 'Understanding Scenarios' },
+  { id: 'scenarios', label: 'Scenario YAML Reference' },
   { id: 'layers', label: 'The 12 Layers' },
+  { id: 'metrics', label: 'Metrics' },
   { id: 'templates', label: 'Agent Templates' },
   { id: 'plugins', label: 'Writing a Plugin' },
   { id: 'cli', label: 'CLI Reference' },
@@ -80,7 +81,7 @@ function CodeBlock({
 }
 
 /* ------------------------------------------------------------------ */
-/*  TerminalBlock — simulated terminal output                          */
+/*  TerminalBlock                                                      */
 /* ------------------------------------------------------------------ */
 
 function TerminalBlock({ children }: { children: string }) {
@@ -125,8 +126,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 py-16 first:pt-8">
-      <h2 className="mb-8 text-3xl font-bold tracking-tight text-warm-900">
+    <section id={id} className="scroll-mt-24 py-12 first:pt-8">
+      <h2 className="mb-6 text-2xl font-bold tracking-tight text-warm-900 sm:text-3xl">
         {title}
       </h2>
       {children}
@@ -135,7 +136,7 @@ function Section({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Sidebar (desktop + mobile)                                         */
+/*  Sidebar                                                            */
 /* ------------------------------------------------------------------ */
 
 function Sidebar({
@@ -149,7 +150,6 @@ function Sidebar({
 }) {
   return (
     <>
-      {/* Backdrop (mobile) */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
@@ -157,20 +157,19 @@ function Sidebar({
         />
       )}
 
-      {/* Panel */}
       <aside
         className={`
-          fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-72 transform border-r border-warm-200
+          fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-64 transform border-r border-warm-200
           bg-white/95 backdrop-blur-md transition-transform duration-300 ease-in-out
           lg:sticky lg:z-10 lg:translate-x-0 lg:border-r lg:bg-white/80
           ${open ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <nav className="h-full overflow-y-auto px-6 py-8">
-          <p className="mb-6 text-xs font-semibold uppercase tracking-widest text-warm-400">
+        <nav className="h-full overflow-y-auto px-5 py-8">
+          <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-warm-400">
             Documentation
           </p>
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {TOC.map((item) => {
               const isActive = activeId === item.id;
               return (
@@ -197,7 +196,7 @@ function Sidebar({
             })}
           </ul>
 
-          <div className="mt-10 rounded-xl border border-warm-200 bg-warm-50 p-4">
+          <div className="mt-8 rounded-xl border border-warm-200 bg-warm-50 p-4">
             <p className="text-xs font-semibold text-warm-700">Need help?</p>
             <p className="mt-1 text-xs leading-relaxed text-warm-500">
               Open an issue on{' '}
@@ -208,15 +207,6 @@ function Sidebar({
                 className="font-medium text-crimson hover:underline"
               >
                 GitHub
-              </a>{' '}
-              or join the{' '}
-              <a
-                href="https://github.com/mariagorskikh/nest/discussions"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-crimson hover:underline"
-              >
-                Discussions
               </a>
               .
             </p>
@@ -275,10 +265,9 @@ function FaqItem({
 /* ================================================================== */
 
 export default function DocsPage() {
-  const [activeId, setActiveId] = useState('getting-started');
+  const [activeId, setActiveId] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /* ---- IntersectionObserver for active section tracking ---- */
   useEffect(() => {
     const ids = TOC.map((t) => t.id);
     const elements = ids
@@ -289,7 +278,6 @@ export default function DocsPage() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Find the first visible section
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => {
@@ -332,7 +320,6 @@ export default function DocsPage() {
         </svg>
       </button>
 
-      {/* Sidebar */}
       <Sidebar
         activeId={activeId}
         open={sidebarOpen}
@@ -340,65 +327,53 @@ export default function DocsPage() {
       />
 
       {/* Main content */}
-      <div className="lg:ml-72">
+      <div className="lg:ml-64">
         <div className="mx-auto max-w-3xl px-6 pb-24 lg:px-12">
-          {/* Hero */}
-          <div className="pb-12 pt-12">
-            <div className="inline-flex items-center gap-2 rounded-full border border-crimson/20 bg-crimson/5 px-3.5 py-1 text-xs font-medium text-crimson">
-              <span className="h-1.5 w-1.5 rounded-full bg-crimson" />
-              Documentation
-            </div>
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-warm-950 sm:text-5xl">
+          {/* Hero — compact */}
+          <div className="pb-8 pt-10">
+            <h1 className="text-3xl font-bold tracking-tight text-warm-950 sm:text-4xl">
               NEST Documentation
             </h1>
-            <p className="mt-4 text-lg leading-relaxed text-warm-500">
-              Everything you need to install, configure, and run multi-agent
-              simulations with NEST. Written for humans, not just engineers.
+            <p className="mt-3 text-base leading-relaxed text-warm-500">
+              Install, configure, and run multi-agent simulations.
             </p>
           </div>
 
           <div className="h-px bg-warm-200" />
 
           {/* ================================================== */}
-          {/*  Getting Started                                    */}
+          {/*  Overview                                            */}
           {/* ================================================== */}
-          <Section id="getting-started" title="Getting Started">
-            <h3 className="mb-4 text-xl font-semibold text-warm-800">
-              What is NEST?
-            </h3>
+          <Section id="overview" title="Overview">
             <p className="mb-4 text-base leading-relaxed text-warm-600">
-              NEST is a sandbox where you can test how AI agents interact with
-              each other. Think of it like a flight simulator, but for AI agent
-              networks. You define a scenario (like a marketplace or an
-              election), NEST creates the agents, runs the simulation, and shows
-              you exactly what happened.
+              NEST (Network Environment for Swarm Testing) is a sandbox for
+              testing how AI agents interact with each other. You define a
+              scenario in YAML&mdash;agents, roles, protocol layers, failure
+              conditions&mdash;and NEST runs the simulation, recording every
+              message in a JSONL trace you can inspect and replay.
             </p>
-            <p className="mb-8 text-base leading-relaxed text-warm-600">
-              There are no black boxes here. Every message, every decision, every
-              trust score is recorded in a trace file you can inspect, replay,
-              and visualize.
+            <p className="mb-6 text-base leading-relaxed text-warm-600">
+              NEST is built at MIT Media Lab as part of Project NANDA. It is
+              open-source research software (Apache 2.0).
             </p>
 
-            <h3 className="mb-4 text-xl font-semibold text-warm-800">
-              Who is NEST for?
-            </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               {[
                 {
                   title: 'Researchers',
-                  desc: 'Study emergent behavior, coordination failures, and trust dynamics in multi-agent systems.',
+                  desc: 'Study emergent behavior, coordination failures, and trust dynamics with full observability.',
                 },
                 {
                   title: 'Protocol Designers',
-                  desc: 'Stress-test your protocol with hundreds of agents before deploying it to the real world.',
+                  desc: 'Stress-test your agent protocol with configurable failure injection and deterministic replay.',
                 },
                 {
                   title: 'Developers',
-                  desc: 'Build and debug multi-agent applications with complete observability and reproducible traces.',
+                  desc: 'Build and debug multi-agent systems with JSONL traces, metrics, and HTML reports.',
                 },
                 {
                   title: 'Students',
-                  desc: 'Learn about AI coordination, game theory, and agent interaction patterns hands-on.',
+                  desc: 'Learn about agent coordination, game theory, and multi-agent interaction hands-on.',
                 },
               ].map((card) => (
                 <div
@@ -417,9 +392,140 @@ export default function DocsPage() {
           <div className="h-px bg-warm-200" />
 
           {/* ================================================== */}
+          {/*  Tier 1 vs Tier 2                                   */}
+          {/* ================================================== */}
+          <Section id="tiers" title="Tier 1 vs Tier 2">
+            <p className="mb-6 text-base leading-relaxed text-warm-600">
+              NEST has two simulation tiers. They share the same scenario format,
+              the same 12 protocol layers, and the same trace output&mdash;they
+              differ in what drives agent decisions.
+            </p>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              {/* Tier 1 */}
+              <div className="rounded-xl border-2 border-warm-200 p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-warm-900 text-xs font-bold text-white">
+                    1
+                  </span>
+                  <h3 className="text-lg font-bold text-warm-900">
+                    Tier 1: Deterministic
+                  </h3>
+                </div>
+                <p className="text-sm leading-relaxed text-warm-600 mb-4">
+                  Agents are state machines with hard-coded rules.
+                  Same seed = identical trace, every time.
+                </p>
+                <ul className="space-y-2 text-sm text-warm-600">
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Reproducible:</strong> same seed produces identical output, bit-for-bit</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Fast:</strong> 10,000+ agents on a laptop, sub-second runs</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Free:</strong> no API keys, no internet, no cost per run</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Isolates protocol logic:</strong> when something fails, it&rsquo;s the protocol, not the LLM</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-amber-600 font-bold">&minus;</span>
+                    <span>Agents follow fixed rules; no creativity or adaptation</span>
+                  </li>
+                </ul>
+                <div className="mt-4 rounded-lg bg-warm-50 border border-warm-200 px-4 py-3">
+                  <p className="text-xs font-semibold text-warm-700 mb-1">Use Tier 1 to:</p>
+                  <ul className="text-xs text-warm-500 space-y-1">
+                    <li>- Validate protocol correctness before adding LLMs</li>
+                    <li>- Run large-scale (1000+) simulations quickly</li>
+                    <li>- Reproduce bugs deterministically</li>
+                    <li>- Test failure injection (message drops, partitions)</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Tier 2 */}
+              <div className="rounded-xl border-2 border-crimson/20 p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-crimson text-xs font-bold text-white">
+                    2
+                  </span>
+                  <h3 className="text-lg font-bold text-warm-900">
+                    Tier 2: LLM-Backed
+                  </h3>
+                </div>
+                <p className="text-sm leading-relaxed text-warm-600 mb-4">
+                  Agents are backed by GPT-4, Claude, or any OpenAI-compatible
+                  endpoint. They receive the scenario context as a system prompt
+                  and decide what to do each tick.
+                </p>
+                <ul className="space-y-2 text-sm text-warm-600">
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Realistic:</strong> agents make decisions like real AI systems</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Emergent behavior:</strong> agents can surprise you</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-emerald-600 font-bold">+</span>
+                    <span><strong>Custom prompts:</strong> YAML templates control each agent&rsquo;s personality</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-amber-600 font-bold">&minus;</span>
+                    <span><strong>Non-deterministic:</strong> different runs yield different traces</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-amber-600 font-bold">&minus;</span>
+                    <span><strong>Costs money:</strong> each agent turn is an API call</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 text-amber-600 font-bold">&minus;</span>
+                    <span><strong>Slow:</strong> limited by API latency and rate limits (10-100 agents)</span>
+                  </li>
+                </ul>
+                <div className="mt-4 rounded-lg bg-crimson/5 border border-crimson/10 px-4 py-3">
+                  <p className="text-xs font-semibold text-warm-700 mb-1">Use Tier 2 to:</p>
+                  <ul className="text-xs text-warm-500 space-y-1">
+                    <li>- Test how LLMs behave in multi-agent protocols</li>
+                    <li>- Benchmark different models on the same scenario</li>
+                    <li>- Study emergent coordination and strategic behavior</li>
+                    <li>- Evaluate prompt engineering for agent roles</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-xl border border-warm-200 bg-warm-50 p-5">
+              <p className="text-sm leading-relaxed text-warm-600">
+                <strong>Recommended workflow:</strong> Start with Tier 1 to
+                validate your scenario and protocol logic, then switch to Tier 2 by
+                changing <InlineCode>brain: state-machine</InlineCode> to{' '}
+                <InlineCode>brain: llm</InlineCode> in your YAML. Everything else
+                stays the same&mdash;same layers, same metrics, same trace format.
+              </p>
+            </div>
+          </Section>
+
+          <div className="h-px bg-warm-200" />
+
+          {/* ================================================== */}
           {/*  Installation                                       */}
           {/* ================================================== */}
           <Section id="installation" title="Installation">
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-5 py-3">
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> NEST is not yet published to PyPI. Install
+                from the Git repository as shown below.
+              </p>
+            </div>
+
             <h3 className="mb-3 text-lg font-semibold text-warm-800">
               Prerequisites
             </h3>
@@ -428,32 +534,56 @@ export default function DocsPage() {
                 <strong>Python 3.12+</strong> &mdash; check with{' '}
                 <InlineCode>python --version</InlineCode>
               </li>
+              <li>
+                <strong>uv</strong> (recommended) or <strong>pip</strong> &mdash;{' '}
+                <InlineCode>pip install uv</InlineCode>
+              </li>
             </ul>
 
             <h3 className="mb-3 text-lg font-semibold text-warm-800">
-              Install the CLI
+              Clone and install
             </h3>
-            <CodeBlock>pip install nest-cli</CodeBlock>
+            <CodeBlock>
+{`git clone https://github.com/mariagorskikh/nest.git
+cd nest
+uv sync`}
+            </CodeBlock>
+
+            <p className="mb-4 text-sm text-warm-600">
+              This installs all 7 workspace packages (nest-core, nest-cli,
+              nest-shell, nest-sdk, nest-mocks, nest-plugins-reference,
+              nest-scenarios) in a single virtual environment.
+            </p>
 
             <h3 className="mb-3 text-lg font-semibold text-warm-800">
               Verify your installation
             </h3>
-            <CodeBlock>nest doctor</CodeBlock>
+            <CodeBlock>uv run nest doctor</CodeBlock>
 
-            <p className="mb-3 text-sm text-warm-500">
-              You should see output like this:
-            </p>
             <TerminalBlock>
-{`$ nest doctor
-NEST CLI v0.6.0
-Python ......... 3.12.4  ✓
-Runtime ........ ok       ✓
-Plugins ........ 12/12    ✓
-Scenarios ...... 6 found  ✓
-Dashboard ...... ready    ✓
+{`$ uv run nest doctor
+NEST CLI v0.1.0
+Python ......... 3.12.4  ok
+Runtime ........ ok       ok
+Plugins ........ 12/12    ok
+Scenarios ...... 6 found  ok
 
-All checks passed. You're good to go.`}
+All checks passed.`}
             </TerminalBlock>
+
+            <h3 className="mb-3 mt-6 text-lg font-semibold text-warm-800">
+              For Tier 2 (LLM agents)
+            </h3>
+            <p className="mb-3 text-sm text-warm-600">
+              If you want to run LLM-backed agents, set your API key:
+            </p>
+            <CodeBlock>
+{`# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# or Anthropic
+export ANTHROPIC_API_KEY="sk-ant-..."`}
+            </CodeBlock>
           </Section>
 
           <div className="h-px bg-warm-200" />
@@ -462,30 +592,27 @@ All checks passed. You're good to go.`}
           {/*  Your First Experiment                               */}
           {/* ================================================== */}
           <Section id="first-experiment" title="Your First Experiment">
-            <p className="mb-8 text-base leading-relaxed text-warm-600">
-              Let&rsquo;s run a marketplace simulation end-to-end in four steps.
-              This will create agents, run the scenario, and produce a visual
-              report.
+            <p className="mb-6 text-base leading-relaxed text-warm-600">
+              Run a marketplace simulation end-to-end in three steps. 50 buyers
+              and 50 sellers negotiate prices over 10 rounds.
             </p>
 
-            {/* Step 1 */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-crimson text-xs font-bold text-white">
                   1
                 </span>
                 <h3 className="text-lg font-semibold text-warm-800">
-                  Run a scenario
+                  Run the scenario
                 </h3>
               </div>
-              <p className="mb-3 text-sm text-warm-600">
-                This reads the scenario YAML, spins up the agents, and executes
-                the simulation. The trace is saved automatically.
+              <CodeBlock>uv run nest run scenarios/marketplace.yaml</CodeBlock>
+              <p className="mt-2 text-sm text-warm-500">
+                This creates the agents, runs the simulation, and writes
+                the trace to <InlineCode>traces/marketplace.jsonl</InlineCode>.
               </p>
-              <CodeBlock>nest run scenarios/marketplace.yaml</CodeBlock>
             </div>
 
-            {/* Step 2 */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-crimson text-xs font-bold text-white">
@@ -495,162 +622,133 @@ All checks passed. You're good to go.`}
                   Inspect the trace
                 </h3>
               </div>
-              <p className="mb-3 text-sm text-warm-600">
-                Opens an interactive terminal viewer showing every message,
-                decision, and state change in chronological order.
+              <CodeBlock>uv run nest inspect traces/marketplace.jsonl</CodeBlock>
+              <p className="mt-2 text-sm text-warm-500">
+                Shows a summary of every event: sends, receives, drops,
+                per-agent stats, and timing.
               </p>
-              <CodeBlock>nest inspect traces/marketplace.jsonl</CodeBlock>
             </div>
 
-            {/* Step 3 */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-crimson text-xs font-bold text-white">
                   3
                 </span>
                 <h3 className="text-lg font-semibold text-warm-800">
-                  Open the dashboard
+                  Generate an HTML report
                 </h3>
               </div>
-              <p className="mb-3 text-sm text-warm-600">
-                Launches a local web dashboard where you can visualize agent
-                interactions, replay events, and explore the network graph.
+              <CodeBlock>uv run nest report traces/marketplace.jsonl -o report.html</CodeBlock>
+              <p className="mt-2 text-sm text-warm-500">
+                Produces an HTML page with delivery rate, deal rate, latency,
+                throughput, per-agent breakdown, and event summary.
               </p>
-              <CodeBlock>nest dashboard traces/marketplace.jsonl</CodeBlock>
-            </div>
-
-            {/* Step 4 */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-crimson text-xs font-bold text-white">
-                  4
-                </span>
-                <h3 className="text-lg font-semibold text-warm-800">
-                  View metrics
-                </h3>
-              </div>
-              <p className="mb-3 text-sm text-warm-600">
-                Generates an HTML report with aggregated metrics &mdash;
-                convergence time, message count, trust distribution, and more.
-              </p>
-              <CodeBlock>nest report traces/marketplace.jsonl -o report.html</CodeBlock>
             </div>
           </Section>
 
           <div className="h-px bg-warm-200" />
 
           {/* ================================================== */}
-          {/*  Understanding Scenarios                             */}
+          {/*  Scenario YAML Reference                             */}
           {/* ================================================== */}
-          <Section id="scenarios" title="Understanding Scenarios">
+          <Section id="scenarios" title="Scenario YAML Reference">
             <p className="mb-6 text-base leading-relaxed text-warm-600">
-              A scenario is a YAML file that describes the entire simulation:
-              which agents exist, what rules they follow, and what you want to
-              measure. Here is a complete example with annotations.
+              A scenario YAML defines everything about a simulation run. Here
+              is a complete, annotated example matching the actual schema.
             </p>
 
             <CodeBlock title="scenarios/marketplace.yaml">
-{`name: marketplace                   # Unique scenario identifier
-tier: 1                              # 1 = rule-based, 2 = LLM-backed
+{`name: marketplace
+description: "50 buyers and 50 sellers trading products."
+
+tier: 1                           # 1 = state-machine, 2 = LLM
+seed: 42                          # RNG seed (deterministic replay)
 
 agents:
-  count: 50                          # Number of agents to create
-  brain: rule                        # "rule" or "llm"
-  roles:                             # Role distribution
-    - buyer: 25
-    - seller: 25
+  count: 100                      # Total agent count
+  brain: state-machine            # "state-machine" or "llm"
+  # llm_provider: openai          # For Tier 2: openai or anthropic
+  # llm_model: gpt-4o-mini        # For Tier 2: model name
+  roles:
+    - name: buyer
+      count: 50
+    - name: seller
+      count: 50
 
-layers:                              # Which protocol layers to activate
-  - transport
-  - communication
-  - identity
-  - trust
-  - payments
-  - negotiation
+layers:                           # Plugin name for each protocol layer
+  transport: in_memory
+  comms: nest_native
+  identity: did_key
+  registry: in_memory
+  auth: jwt
+  trust: score_average
+  payments: prepaid_credits
+  coordination: contract_net
+  negotiation: alternating_offers
+  memory: blackboard
+  privacy: noop
+  datafacts: datafacts_v1
 
-task: >
-  Buyers search for the best price.
-  Sellers compete for buyers.
-  Run until the market reaches equilibrium.
+task:
+  type: marketplace               # Scenario type
+  config:
+    rounds: 10                    # Scenario-specific config
 
-duration: 300                        # Max duration in seconds
-metrics:                             # What to measure
-  - convergence_time
-  - avg_price
-  - trust_distribution
-  - messages_per_agent
+failures:                         # Failure injection
+  message_drop: 0.0              # 0.0 = no drops, 0.1 = 10% drop rate
+  byzantine_agents: 0.0          # Fraction of agents that garble messages
+  # network_partition:            # Split agents into isolated groups
+  #   groups: [["buyer-0"], ["seller-0"]]
 
-output: traces/marketplace.jsonl     # Where to write the trace`}
+duration: "ticks: 10000"          # Max simulation ticks
+
+metrics:                          # Which metrics to compute
+  - delivery_rate
+  - deal_rate
+  - mean_latency
+  - message_count
+  - agent_count
+
+output:
+  trace: ./traces/marketplace.jsonl
+  # report: ./reports/marketplace.html  # Optional HTML report`}
             </CodeBlock>
 
             <h3 className="mb-4 mt-8 text-lg font-semibold text-warm-800">
-              Scenario fields
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-warm-200">
-                    <th className="pb-3 pr-6 text-left font-semibold text-warm-900">
-                      Field
-                    </th>
-                    <th className="pb-3 text-left font-semibold text-warm-900">
-                      Description
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-warm-100">
-                  {[
-                    ['name', 'Unique identifier for the scenario'],
-                    ['tier', '1 for rule-based agents, 2 for LLM-backed agents'],
-                    ['agents.count', 'Total number of agents to spawn'],
-                    ['agents.brain', '"rule" (fast, deterministic) or "llm" (GPT/Claude-backed)'],
-                    ['agents.roles', 'List of roles and how many agents get each role'],
-                    ['layers', 'Protocol layers to activate (see The 12 Layers)'],
-                    ['task', 'Plain-English description of what agents should do'],
-                    ['duration', 'Maximum simulation time in seconds'],
-                    ['metrics', 'List of metrics to collect during the run'],
-                    ['output', 'File path for the trace output'],
-                  ].map(([field, desc]) => (
-                    <tr key={field}>
-                      <td className="py-3 pr-6 font-mono text-sm text-crimson">
-                        {field}
-                      </td>
-                      <td className="py-3 text-warm-600">{desc}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <h3 className="mb-4 mt-10 text-lg font-semibold text-warm-800">
               Available scenarios
             </h3>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-warm-200">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-warm-200">
-                    <th className="pb-3 pr-6 text-left font-semibold text-warm-900">
-                      Scenario
+                  <tr className="border-b border-warm-200 bg-warm-50">
+                    <th className="px-4 py-3 text-left font-semibold text-warm-900">
+                      File
                     </th>
-                    <th className="pb-3 text-left font-semibold text-warm-900">
+                    <th className="px-4 py-3 text-left font-semibold text-warm-900">
                       Description
+                    </th>
+                    <th className="hidden px-4 py-3 text-left font-semibold text-warm-900 md:table-cell">
+                      Agents
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-warm-100">
                   {[
-                    ['marketplace', 'Buyers and sellers negotiate prices in a competitive market'],
-                    ['auction', 'Agents bid on items using various auction strategies'],
-                    ['voting', 'Agents vote on proposals with different preference models'],
-                    ['consensus', 'Agents attempt to reach agreement on a shared state'],
-                    ['supply_chain', 'Multi-tier supply chain with producers, distributors, and retailers'],
-                    ['reputation', 'Agents build and evaluate reputation scores over repeated interactions'],
-                  ].map(([name, desc]) => (
-                    <tr key={name}>
-                      <td className="py-3 pr-6 font-mono text-sm text-crimson">
+                    ['marketplace.yaml', 'Buyers and sellers negotiate prices', '50 buyers + 50 sellers'],
+                    ['auction.yaml', 'Sealed-bid auction with auctioneer', '1 auctioneer + 49 bidders'],
+                    ['voting.yaml', 'Proposer, voters, and coordinator', '1 proposer + 20 voters + 1 coordinator'],
+                    ['consensus.yaml', 'Leader-based quorum voting', '1 leader + 19 followers'],
+                    ['supply_chain.yaml', '4-hop supply chain pipeline', 'supplier, manufacturer, distributor, retailer'],
+                    ['reputation.yaml', 'Honest and malicious traders with observer', '6 honest + 2 malicious + 1 observer'],
+                  ].map(([name, desc, agents]) => (
+                    <tr key={name} className="hover:bg-warm-50/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-crimson">
                         {name}
                       </td>
-                      <td className="py-3 text-warm-600">{desc}</td>
+                      <td className="px-4 py-3 text-warm-600">{desc}</td>
+                      <td className="hidden px-4 py-3 text-warm-500 md:table-cell">
+                        {agents}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -666,8 +764,9 @@ output: traces/marketplace.jsonl     # Where to write the trace`}
           <Section id="layers" title="The 12 Layers">
             <p className="mb-6 text-base leading-relaxed text-warm-600">
               NEST organizes agent capabilities into 12 protocol layers. Each
-              layer has a default plugin you can swap out, and you only activate
-              the layers your scenario needs.
+              layer has a default reference implementation you can swap out.
+              Agents access layers via{' '}
+              <InlineCode>ctx.plugins.get(&quot;layer_name&quot;)</InlineCode>.
             </p>
 
             <div className="overflow-x-auto rounded-xl border border-warm-200">
@@ -681,28 +780,25 @@ output: traces/marketplace.jsonl     # Where to write the trace`}
                       What it does
                     </th>
                     <th className="hidden px-4 py-3 text-left font-semibold text-warm-900 md:table-cell">
-                      Default plugin
-                    </th>
-                    <th className="hidden px-4 py-3 text-left font-semibold text-warm-900 lg:table-cell">
-                      Example use case
+                      Default
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-warm-100">
                   {[
-                    ['Transport', 'Moves messages between agents', 'nest-zmq', 'Local or networked agent communication'],
-                    ['Communication', 'Structures message formats and protocols', 'nest-acl', 'FIPA-ACL compliant messaging'],
-                    ['Identity', 'Assigns and verifies agent identities', 'nest-did', 'Decentralized identity for each agent'],
-                    ['Registry', 'Discovers and lists available agents', 'nest-registry', 'Service discovery in large swarms'],
-                    ['Auth', 'Handles authentication and permissions', 'nest-auth', 'Role-based access between agents'],
-                    ['Trust', 'Calculates and updates trust scores', 'nest-trust', 'Reputation-weighted interactions'],
-                    ['Payments', 'Manages virtual currency and transfers', 'nest-ledger', 'Token-based marketplace economies'],
-                    ['Coordination', 'Orchestrates multi-agent workflows', 'nest-coord', 'Task assignment and load balancing'],
-                    ['Negotiation', 'Runs negotiation protocols', 'nest-negotiate', 'Price bargaining, SLA negotiation'],
-                    ['Memory', 'Stores and retrieves agent memory', 'nest-memory', 'Learning from past interactions'],
-                    ['Privacy', 'Enforces data-sharing boundaries', 'nest-privacy', 'Selective disclosure of agent data'],
-                    ['Data Facts', 'Validates and attests to data claims', 'nest-facts', 'Provenance checking, fact verification'],
-                  ].map(([layer, what, plugin, example]) => (
+                    ['Transport', 'Moves messages between agents', 'in_memory'],
+                    ['Comms', 'Structures message formats', 'nest_native'],
+                    ['Identity', 'Assigns and verifies agent identities', 'did_key'],
+                    ['Registry', 'Agent discovery and service lookup', 'in_memory'],
+                    ['Auth', 'Authentication and permissions', 'jwt'],
+                    ['Trust', 'Calculates and updates reputation scores', 'score_average'],
+                    ['Payments', 'Virtual currency balance and transfers', 'prepaid_credits'],
+                    ['Coordination', 'Orchestrates multi-agent workflows', 'contract_net'],
+                    ['Negotiation', 'Runs negotiation protocols', 'alternating_offers'],
+                    ['Memory', 'Stores and retrieves agent memory', 'blackboard'],
+                    ['Privacy', 'Enforces data-sharing boundaries', 'noop'],
+                    ['Data Facts', 'Validates and attests to data claims', 'datafacts_v1'],
+                  ].map(([layer, what, plugin]) => (
                     <tr key={layer} className="hover:bg-warm-50/50 transition-colors">
                       <td className="whitespace-nowrap px-4 py-3 font-semibold text-warm-900">
                         {layer}
@@ -711,9 +807,64 @@ output: traces/marketplace.jsonl     # Where to write the trace`}
                       <td className="hidden px-4 py-3 font-mono text-xs text-crimson md:table-cell">
                         {plugin}
                       </td>
-                      <td className="hidden px-4 py-3 text-warm-500 lg:table-cell">
-                        {example}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="mt-4 text-sm text-warm-500">
+              Currently, the marketplace scenario uses registry, identity,
+              trust, and payments layers. Other scenarios use the layers
+              passively (they&rsquo;re resolved but agents don&rsquo;t yet
+              call them). Wiring more scenarios to use layers is in progress.
+            </p>
+          </Section>
+
+          <div className="h-px bg-warm-200" />
+
+          {/* ================================================== */}
+          {/*  Metrics                                             */}
+          {/* ================================================== */}
+          <Section id="metrics" title="Metrics">
+            <p className="mb-6 text-base leading-relaxed text-warm-600">
+              NEST computes metrics from the JSONL trace after each run. Specify
+              which metrics you want in the scenario YAML. There is no single
+              &ldquo;composite score&rdquo;&mdash;each metric measures something
+              specific.
+            </p>
+
+            <div className="overflow-x-auto rounded-xl border border-warm-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-warm-200 bg-warm-50">
+                    <th className="px-4 py-3 text-left font-semibold text-warm-900">
+                      Metric
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-warm-900">
+                      What it measures
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-warm-100">
+                  {[
+                    ['delivery_rate', 'Fraction of sent messages that were received. 100% in Tier 1 with no message drops.'],
+                    ['deal_rate', 'Percentage of buy requests that resulted in a trade (sold:). Marketplace/auction only.'],
+                    ['rejection_rate', 'Percentage of buy requests that were rejected. Marketplace only.'],
+                    ['mean_rounds_to_deal', 'Average negotiation rounds before a successful trade.'],
+                    ['mean_latency', 'Average time (ticks) between a send and its correlated receive.'],
+                    ['message_count', 'Total number of send + receive events in the trace.'],
+                    ['dropped_count', 'Number of messages dropped by failure injection.'],
+                    ['agent_count', 'Number of distinct agents that participated.'],
+                    ['duration', 'Time span from first to last event (ticks).'],
+                    ['throughput', 'Messages per tick across all agents.'],
+                    ['unique_pairs', 'Number of unique agent pairs that exchanged messages.'],
+                  ].map(([name, desc]) => (
+                    <tr key={name} className="hover:bg-warm-50/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-crimson">
+                        {name}
                       </td>
+                      <td className="px-4 py-3 text-warm-600">{desc}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -726,41 +877,40 @@ output: traces/marketplace.jsonl     # Where to write the trace`}
           {/* ================================================== */}
           {/*  Agent Templates                                     */}
           {/* ================================================== */}
-          <Section id="templates" title="Agent Templates">
+          <Section id="templates" title="Agent Templates (Tier 2)">
             <p className="mb-6 text-base leading-relaxed text-warm-600">
-              Templates are YAML files that define how an agent behaves &mdash;
-              its role, personality, decision logic, and which LLM provider to
-              use. They make it easy to reuse and share agent configurations.
+              Templates are YAML files that define LLM-backed agent behavior:
+              system prompt, provider, model, and parameters. They&rsquo;re only
+              used in Tier 2 scenarios.
             </p>
 
-            <h3 className="mb-3 text-lg font-semibold text-warm-800">
-              List available templates
-            </h3>
-            <CodeBlock>nest templates list</CodeBlock>
+            <CodeBlock title="templates/agents/marketplace-buyer.yaml">
+{`name: marketplace-buyer
+description: "Buyer agent for marketplace scenarios."
+provider: openai
+model: gpt-4o-mini
+temperature: 0.7
+max_tokens: 256
+system_prompt: |
+  You are a buyer in a marketplace simulation.
+
+  ACTION: send
+  TO: <agent-id>
+  MESSAGE: <message-content>
+
+  Rules:
+  - Send buy:<product>:<price> to purchase.
+  - If rejected, increase your offer or try another seller.`}
+            </CodeBlock>
 
             <h3 className="mb-3 mt-6 text-lg font-semibold text-warm-800">
-              Inspect a template
+              CLI commands
             </h3>
-            <CodeBlock>nest templates show marketplace-buyer</CodeBlock>
-
-            <h3 className="mb-3 mt-6 text-lg font-semibold text-warm-800">
-              Duplicate and customize
-            </h3>
-            <p className="mb-3 text-sm text-warm-600">
-              Start from an existing template and make it your own.
-            </p>
-            <CodeBlock>nest templates duplicate marketplace-buyer my-buyer</CodeBlock>
-
-            <h3 className="mb-3 mt-6 text-lg font-semibold text-warm-800">
-              Create from scratch
-            </h3>
-            <p className="mb-3 text-sm text-warm-600">
-              Create a brand-new template with a system prompt and LLM provider.
-            </p>
             <CodeBlock>
-{`nest templates create my-agent \\
-  --prompt "You are a cautious buyer who never pays above market price." \\
-  --provider openai`}
+{`uv run nest templates list              # List all templates
+uv run nest templates show <name>       # View a template
+uv run nest templates create <name>     # Create from scratch
+uv run nest templates duplicate <src> <dest>  # Copy and modify`}
             </CodeBlock>
           </Section>
 
@@ -771,67 +921,67 @@ output: traces/marketplace.jsonl     # Where to write the trace`}
           {/* ================================================== */}
           <Section id="plugins" title="Writing a Plugin">
             <p className="mb-6 text-base leading-relaxed text-warm-600">
-              Plugins let you replace any of the 12 layers with your own
-              implementation. A plugin is a Python class that implements a layer
-              interface, packaged as a standard Python package.
+              You can replace any of the 12 layers with your own implementation.
+              A plugin is a Python class that matches the expected interface,
+              registered via Python entry points.
             </p>
 
             <h3 className="mb-3 text-lg font-semibold text-warm-800">
-              Minimal plugin example
+              Example: Custom trust plugin
             </h3>
-            <CodeBlock title="my_trust_plugin/plugin.py">
-{`from nest.layers import TrustLayer
+            <p className="mb-3 text-sm text-warm-600">
+              Look at the reference implementations in{' '}
+              <InlineCode>packages/nest-plugins-reference/</InlineCode> for
+              the interface each layer expects. Here&rsquo;s a trust plugin:
+            </p>
+            <CodeBlock title="my_trust/plugin.py">
+{`from nest_core.types import AgentId, Evidence, ReputationScore
 
-class MyTrustPlugin(TrustLayer):
-    """Custom trust layer that decays over time."""
+class DecayTrust:
+    """Custom trust layer with time decay."""
 
-    name = "my-trust"
+    def __init__(self, identity=None):
+        self._scores: dict[AgentId, list[float]] = {}
 
-    def initialize(self, config: dict) -> None:
-        self.decay_rate = config.get("decay_rate", 0.95)
-        self.scores: dict[str, float] = {}
+    async def score(self, agent: AgentId) -> ReputationScore:
+        entries = self._scores.get(agent, [])
+        if not entries:
+            return ReputationScore(
+                agent_id=agent, score=0.5,
+                confidence=0.0, sample_count=0,
+            )
+        avg = sum(entries) / len(entries)
+        return ReputationScore(
+            agent_id=agent, score=avg,
+            confidence=min(1.0, len(entries) / 50),
+            sample_count=len(entries),
+        )
 
-    def query(self, agent_id: str) -> float:
-        """Return the current trust score for an agent."""
-        return self.scores.get(agent_id, 0.5)
-
-    def update(self, agent_id: str, outcome: bool) -> None:
-        """Update trust based on interaction outcome."""
-        current = self.scores.get(agent_id, 0.5)
-        delta = 0.1 if outcome else -0.2
-        self.scores[agent_id] = max(0, min(1, current + delta))
-
-    def tick(self) -> None:
-        """Called each simulation step. Apply time decay."""
-        for agent_id in self.scores:
-            self.scores[agent_id] *= self.decay_rate`}
+    async def report(self, agent: AgentId, evidence: Evidence):
+        val = 1.0 if evidence.kind == "positive" else 0.0
+        self._scores.setdefault(agent, []).append(val)`}
             </CodeBlock>
 
             <h3 className="mb-3 mt-8 text-lg font-semibold text-warm-800">
               Register via entry point
             </h3>
-            <p className="mb-3 text-sm text-warm-600">
-              Add the plugin to your{' '}
-              <InlineCode>pyproject.toml</InlineCode> so NEST can discover it
-              automatically.
-            </p>
             <CodeBlock title="pyproject.toml">
 {`[project]
 name = "my-trust-plugin"
 version = "0.1.0"
+dependencies = ["nest-core"]
 
-[project.entry-points."nest.plugins"]
-my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
+[project.entry-points."nest.plugins.trust"]
+my_decay = "my_trust.plugin:DecayTrust"`}
             </CodeBlock>
 
-            <h3 className="mb-3 mt-8 text-lg font-semibold text-warm-800">
-              Test conformance
-            </h3>
-            <p className="mb-3 text-sm text-warm-600">
-              NEST includes a conformance test suite to verify your plugin
-              implements the layer interface correctly.
+            <p className="mt-4 text-sm text-warm-600">
+              Then reference it in your scenario YAML:
             </p>
-            <CodeBlock>nest plugins conform my-trust-plugin</CodeBlock>
+            <CodeBlock>
+{`layers:
+  trust: my_decay  # Uses your custom plugin`}
+            </CodeBlock>
           </Section>
 
           <div className="h-px bg-warm-200" />
@@ -841,8 +991,9 @@ my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
           {/* ================================================== */}
           <Section id="cli" title="CLI Reference">
             <p className="mb-6 text-base leading-relaxed text-warm-600">
-              All NEST operations are available through the{' '}
-              <InlineCode>nest</InlineCode> command-line interface.
+              All commands are run via <InlineCode>uv run nest</InlineCode> from
+              the repo root (or just <InlineCode>nest</InlineCode> if
+              installed globally).
             </p>
 
             <div className="overflow-x-auto rounded-xl border border-warm-200">
@@ -860,17 +1011,16 @@ my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
                 <tbody className="divide-y divide-warm-100">
                   {[
                     ['nest run <scenario.yaml>', 'Run a scenario and produce a trace file'],
-                    ['nest inspect <trace.jsonl>', 'Inspect a trace in an interactive terminal viewer'],
+                    ['nest inspect <trace.jsonl>', 'Print event summary and per-agent stats'],
                     ['nest report <trace.jsonl>', 'Generate an HTML metrics report'],
-                    ['nest dashboard [trace.jsonl]', 'Open the web dashboard (optionally preloading a trace)'],
-                    ['nest init <name>', 'Scaffold a new scenario with default settings'],
-                    ['nest doctor', 'Check your installation health and plugin status'],
+                    ['nest init <name>', 'Scaffold a new scenario YAML'],
+                    ['nest doctor', 'Check installation health and plugin status'],
                     ['nest version', 'Print the installed NEST version'],
-                    ['nest plugins list', 'List all installed and available plugins'],
+                    ['nest plugins list', 'List all installed layer plugins'],
                     ['nest templates list', 'List available agent templates'],
-                    ['nest templates show <name>', 'Display the contents of a template'],
+                    ['nest templates show <name>', 'Display a template'],
                     ['nest templates create <name>', 'Create a new agent template'],
-                    ['nest templates duplicate <src> <dest>', 'Duplicate an existing template'],
+                    ['nest templates duplicate <src> <dest>', 'Copy a template'],
                   ].map(([cmd, desc]) => (
                     <tr key={cmd} className="hover:bg-warm-50/50 transition-colors">
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-crimson">
@@ -892,13 +1042,23 @@ my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
           <Section id="faq" title="FAQ">
             <div className="rounded-xl border border-warm-200 bg-white px-6">
               <FaqItem
+                question="Can I pip install this?"
+                answer={
+                  <p>
+                    Not yet. NEST is not published to PyPI. Clone the repo and
+                    run <InlineCode>uv sync</InlineCode> to install locally.
+                    PyPI publishing is on the roadmap.
+                  </p>
+                }
+              />
+              <FaqItem
                 question="Do I need an API key?"
                 answer={
                   <p>
-                    Only for <strong>Tier 2</strong> scenarios that use
-                    LLM-backed agents. Tier 1 scenarios run entirely locally
-                    with rule-based agents and require no API key or internet
-                    connection.
+                    Only for <strong>Tier 2</strong> (LLM-backed) scenarios. Set{' '}
+                    <InlineCode>OPENAI_API_KEY</InlineCode> or{' '}
+                    <InlineCode>ANTHROPIC_API_KEY</InlineCode>. Tier 1 runs
+                    entirely locally with no API calls.
                   </p>
                 }
               />
@@ -906,9 +1066,9 @@ my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
                 question="How many agents can NEST handle?"
                 answer={
                   <p>
-                    <strong>Tier 1</strong> (rule-based): 10,000+ agents on a
-                    modern laptop. <strong>Tier 2</strong> (LLM-backed): 10
-                    &ndash; 100 agents, limited by API rate limits and cost.
+                    <strong>Tier 1:</strong> 10,000+ agents on a modern laptop,
+                    sub-second runs. <strong>Tier 2:</strong> 10&ndash;100
+                    agents, limited by API rate limits and cost.
                   </p>
                 }
               />
@@ -917,9 +1077,9 @@ my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
                 answer={
                   <p>
                     Yes. Set <InlineCode>llm_provider</InlineCode> and{' '}
-                    <InlineCode>llm_model</InlineCode> in your scenario YAML or
-                    agent template. NEST supports OpenAI, Anthropic, and any
-                    OpenAI-compatible endpoint.
+                    <InlineCode>llm_model</InlineCode> in your scenario YAML.
+                    NEST supports OpenAI, Anthropic, and any OpenAI-compatible
+                    endpoint.
                   </p>
                 }
               />
@@ -927,33 +1087,42 @@ my-trust = "my_trust_plugin.plugin:MyTrustPlugin"`}
                 question="Is NEST production-ready?"
                 answer={
                   <p>
-                    NEST is currently alpha/research software. It&rsquo;s
-                    excellent for testing, benchmarking, and research, but it is
-                    not intended for production workloads. APIs may change
-                    between releases.
+                    No. NEST is research software in active development. It is
+                    excellent for experimentation and benchmarking but APIs may
+                    change between releases.
+                  </p>
+                }
+              />
+              <FaqItem
+                question="What does Tier 1 actually test if agents are scripted?"
+                answer={
+                  <p>
+                    Tier 1 tests the <em>protocol</em>, not the agents.
+                    It answers: &ldquo;If every agent follows the rules perfectly,
+                    does the protocol still work under message drops, network
+                    partitions, and Byzantine failures?&rdquo; This is the same
+                    logic behind TLA+ model checking&mdash;verify the design
+                    before adding implementation complexity.
                   </p>
                 }
               />
             </div>
           </Section>
 
-          {/* ================================================== */}
-          {/*  Footer CTA                                          */}
-          {/* ================================================== */}
+          {/* Footer CTA */}
           <div className="mt-8 rounded-2xl border border-warm-200 bg-warm-50 p-8 text-center sm:p-12">
             <h3 className="text-2xl font-bold tracking-tight text-warm-900">
               Ready to start?
             </h3>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-warm-500">
-              Install the CLI, pick a scenario, and run your first simulation in
-              under two minutes.
+              Clone the repo and run your first simulation in under two minutes.
             </p>
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a
                 href="#installation"
                 className="inline-flex items-center justify-center rounded-lg bg-crimson px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-crimson-dark"
               >
-                Install NEST
+                Get Started
               </a>
               <a
                 href="https://github.com/mariagorskikh/nest"
