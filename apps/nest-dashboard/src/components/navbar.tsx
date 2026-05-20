@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/", label: "Home" },
+  { href: "/agents", label: "Agents" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/experiments", label: "Experiments" },
   { href: "/visualizer", label: "Visualizer" },
@@ -18,16 +19,28 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-warm-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3 group">
           <Image
             src="/logo.svg"
             alt="NEST logo"
-            width={36}
-            height={36}
-            className="rounded-lg"
+            width={32}
+            height={32}
+            className="rounded-md"
           />
           <span className="text-lg font-semibold tracking-tight text-warm-900">
             NEST
+          </span>
+          <span className="hidden sm:flex items-center gap-2 pl-3 ml-1 border-l border-warm-200 text-xs text-warm-400">
+            <Image
+              src="/brand/nanda-logo-color.png"
+              alt="Project NANDA"
+              width={18}
+              height={18}
+              className="rounded-sm opacity-90 group-hover:opacity-100 transition-opacity"
+            />
+            <span className="uppercase tracking-widest font-medium">
+              Project NANDA
+            </span>
           </span>
         </Link>
 

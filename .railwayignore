@@ -1,0 +1,8 @@
+.venv
+.claude
+.git
+node_modules
+.next
+traces
+__pycache__
+*.pyc

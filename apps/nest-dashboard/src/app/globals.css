@@ -17,6 +17,7 @@
   --color-warm-950: #0C0A09;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-serif), Georgia, "Times New Roman", serif;
 }
 
 html {

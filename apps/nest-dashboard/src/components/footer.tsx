@@ -11,18 +11,35 @@ export function Footer() {
               <Image
                 src="/logo.svg"
                 alt="NEST logo"
-                width={36}
-                height={36}
-                className="rounded-lg"
+                width={32}
+                height={32}
+                className="rounded-md"
               />
               <span className="text-lg font-semibold tracking-tight text-warm-900">
                 NEST
               </span>
             </div>
             <p className="mt-4 text-sm leading-6 text-warm-500">
-              Network Environment for Swarm Testing. Part of Project NANDA
-              &mdash; the Internet of AI Agents.
+              Network Environment for Swarm Testing &mdash; a discrete-event
+              testbed for multi-agent protocols.
             </p>
+            <a
+              href="https://projectnanda.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-2 text-xs text-warm-500 hover:text-warm-900 transition-colors"
+            >
+              <Image
+                src="/brand/nanda-logo-color.png"
+                alt="Project NANDA"
+                width={16}
+                height={16}
+                className="rounded-sm"
+              />
+              <span className="uppercase tracking-widest font-medium">
+                Part of Project NANDA
+              </span>
+            </a>
           </div>
 
           <div>
