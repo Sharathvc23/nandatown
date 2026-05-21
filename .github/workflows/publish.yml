@@ -6,6 +6,7 @@ on:
     types: [published]
 
 permissions:
+  contents: read
   id-token: write  # OIDC for trusted publishing
 
 jobs:
@@ -27,6 +28,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
 
   # Phase 2: Build and publish SDK (depends on core)
   publish-sdk:
@@ -47,6 +49,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
 
   # Phase 3: Build and publish plugins-reference (depends on core + sdk)
   publish-plugins-reference:
@@ -67,6 +70,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
 
   # Phase 4: Build and publish leaf packages (parallel, depend on sdk)
   publish-cli:
@@ -87,6 +91,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
 
   publish-shell:
     needs: publish-sdk
@@ -106,6 +111,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
 
   publish-scenarios:
     needs: publish-core
@@ -125,6 +131,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
 
   publish-mocks:
     needs: publish-core
@@ -144,3 +151,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true
