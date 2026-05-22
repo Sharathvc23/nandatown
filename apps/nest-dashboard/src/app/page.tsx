@@ -91,7 +91,7 @@ export default function Home() {
         <div className="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 pb-24 md:pt-28 md:pb-32">
           <div className="flex items-center gap-3 mb-10 animate-fade-in">
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-rust animate-pulse-dot" />
-            <span className="eyebrow">Project NANDA &middot; MIT Media Lab</span>
+            <span className="eyebrow">NEST &middot; by Project NANDA</span>
           </div>
 
           <div className="grid gap-16 lg:grid-cols-[1.45fr_1fr] lg:items-start">

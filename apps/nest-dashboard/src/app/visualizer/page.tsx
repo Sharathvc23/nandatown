@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import Image from 'next/image';
+import * as d3 from 'd3';
 
 /* ------------------------------------------------------------------ */
 /*  Real NEST trace format                                            */
@@ -664,34 +665,136 @@ function computeLayout(agents: Agent[], width: number, height: number): Map<stri
 /*  Player                                                             */
 /* ------------------------------------------------------------------ */
 
-interface PlayerProps {
-  derived: Derived;
+interface ForceNode extends d3.SimulationNodeDatum {
+  id: string;
+  role: string;
 }
 
-function Player({ derived }: PlayerProps) {
-  // Sim time = the timestamp in trace seconds we are currently "at".
-  // Player is keyed on scenarioId by parent, so this remounts on scenario
-  // change and we get a fresh tMin without a reset effect.
-  const [simTime, setSimTime] = useState(derived.tMin);
-  const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState(1);
+interface ForceLink extends d3.SimulationLinkDatum<ForceNode> {
+  source: string | ForceNode;
+  target: string | ForceNode;
+  value: number;
+}
+
+interface PlayerProps {
+  derived: Derived;
+  simTime: number;
+  setSimTime: (t: number | ((t: number) => number)) => void;
+  playing: boolean;
+  setPlaying: (p: boolean | ((p: boolean) => boolean)) => void;
+  speed: number;
+  setSpeed: (s: number) => void;
+}
+
+function Player({
+  derived,
+  simTime,
+  setSimTime,
+  playing,
+  setPlaying,
+  speed,
+  setSpeed,
+}: PlayerProps) {
+  // Stage viewport (logical SVG coords). The container scales it to fit.
+  const W = 900;
+  const H = 580;
+
   const [hover, setHover] = useState<string | null>(null);
+  const [focused, setFocused] = useState<string | null>(null);
+  const [view, setView] = useState({ k: 1, x: 0, y: 0 });
+  const [, bump] = useState(0); // forces re-render on force-sim tick
 
-  // SVG viewport — fixed coordinate system, scales with container.
-  const W = 800;
-  const H = 560;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const nodesRef = useRef<ForceNode[]>([]);
+  const positionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const simRef = useRef<d3.Simulation<ForceNode, ForceLink> | null>(null);
 
-  const positions = useMemo(
-    () => computeLayout(derived.agents, W, H),
-    [derived.agents],
-  );
+  // ---- Initialize force sim whenever the trace changes ------------------
+  useEffect(() => {
+    const seed = computeLayout(derived.agents, W, H);
+    const nodes: ForceNode[] = derived.agents.map((a) => {
+      const p = seed.get(a.id) ?? { x: W / 2, y: H / 2 };
+      return { id: a.id, role: a.role, x: p.x, y: p.y, vx: 0, vy: 0 };
+    });
 
-  // Animation loop: sim seconds per wall second derived from total duration.
-  // We compress the whole trace into ~18 seconds of real time at 1×.
+    const edges = derived.edges.filter((e) => e.source !== e.target);
+    const links: ForceLink[] = edges.map((e) => ({
+      source: e.source,
+      target: e.target,
+      value: e.count,
+    }));
+
+    // Cluster centers by role on an outer ring — gives marketplace its
+    // two-side feel and consensus its leader-in-middle feel naturally.
+    const roles = Array.from(new Set(derived.agents.map((a) => a.role)));
+    const roleAngle = new Map<string, number>();
+    roles.forEach((r, i) => {
+      roleAngle.set(
+        r,
+        (2 * Math.PI * i) / Math.max(1, roles.length) - Math.PI / 2,
+      );
+    });
+    const cx = W / 2;
+    const cy = H / 2;
+    const clusterR = Math.min(W, H) * 0.30;
+
+    const n = derived.agents.length;
+    const collideR = n > 60 ? 11 : n > 30 ? 15 : 21;
+
+    const sim = d3
+      .forceSimulation<ForceNode, ForceLink>(nodes)
+      .force(
+        'charge',
+        d3.forceManyBody<ForceNode>().strength(-170).distanceMax(320),
+      )
+      .force(
+        'link',
+        d3
+          .forceLink<ForceNode, ForceLink>(links)
+          .id((d) => d.id)
+          .distance(80)
+          .strength(0.04),
+      )
+      .force('collide', d3.forceCollide<ForceNode>(collideR))
+      .force(
+        'cx',
+        d3
+          .forceX<ForceNode>(
+            (d) => cx + Math.cos(roleAngle.get(d.role) ?? 0) * clusterR,
+          )
+          .strength(0.06),
+      )
+      .force(
+        'cy',
+        d3
+          .forceY<ForceNode>(
+            (d) => cy + Math.sin(roleAngle.get(d.role) ?? 0) * clusterR,
+          )
+          .strength(0.08),
+      )
+      .alpha(1)
+      .alphaDecay(0.022)
+      .on('tick', () => {
+        const m = positionsRef.current;
+        m.clear();
+        for (const node of nodes) {
+          m.set(node.id, { x: node.x ?? 0, y: node.y ?? 0 });
+        }
+        bump((t) => (t + 1) % 1_000_000);
+      });
+
+    simRef.current = sim;
+    nodesRef.current = nodes;
+
+    return () => {
+      sim.stop();
+    };
+  }, [derived]);
+
+  // ---- Animation loop (advances simTime via parent) --------------------
   const targetDuration = 18;
   const simPerWallSec =
     Math.max(derived.tMax - derived.tMin, 0.01) / targetDuration;
-
   const lastWall = useRef<number | null>(null);
   useEffect(() => {
     if (!playing) {
@@ -715,9 +818,108 @@ function Player({ derived }: PlayerProps) {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, speed, simPerWallSec, derived.tMax]);
+  }, [playing, speed, simPerWallSec, derived.tMax, setSimTime, setPlaying]);
 
-  // In-flight messages at current sim time
+  // ---- Pointer → SVG coordinate, accounting for current zoom ------------
+  const clientToSvg = useCallback(
+    (clientX: number, clientY: number) => {
+      const svg = svgRef.current;
+      if (!svg) return { x: 0, y: 0 };
+      const rect = svg.getBoundingClientRect();
+      const sx = ((clientX - rect.left) / rect.width) * W;
+      const sy = ((clientY - rect.top) / rect.height) * H;
+      return { x: (sx - view.x) / view.k, y: (sy - view.y) / view.k };
+    },
+    [view],
+  );
+
+  // ---- Drag a node (use pointer events; pins via fx/fy) -----------------
+  const startNodeDrag = useCallback(
+    (id: string, e: React.PointerEvent) => {
+      if (!simRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const node = nodesRef.current.find((nn) => nn.id === id);
+      if (!node) return;
+
+      simRef.current.alphaTarget(0.3).restart();
+      const start = clientToSvg(e.clientX, e.clientY);
+      node.fx = start.x;
+      node.fy = start.y;
+      node.x = start.x;
+      node.y = start.y;
+
+      let moved = false;
+      const onMove = (ev: PointerEvent) => {
+        moved = true;
+        const pt = clientToSvg(ev.clientX, ev.clientY);
+        node.fx = pt.x;
+        node.fy = pt.y;
+      };
+      const onUp = () => {
+        simRef.current?.alphaTarget(0);
+        // Tiny click = release pin (toggle); real drag keeps it pinned.
+        if (!moved) {
+          node.fx = null;
+          node.fy = null;
+          simRef.current?.alpha(0.25).restart();
+          setFocused((f) => (f === id ? null : id));
+        }
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [clientToSvg],
+  );
+
+  // ---- Background pan ---------------------------------------------------
+  const startBgPan = useCallback(
+    (e: React.PointerEvent) => {
+      if ((e.target as SVGElement).closest('[data-agent]')) return;
+      const startClient = { x: e.clientX, y: e.clientY };
+      const startView = { x: view.x, y: view.y };
+      const svg = svgRef.current!;
+      const rect = svg.getBoundingClientRect();
+      const onMove = (ev: PointerEvent) => {
+        const dx = ((ev.clientX - startClient.x) / rect.width) * W;
+        const dy = ((ev.clientY - startClient.y) / rect.height) * H;
+        setView((v) => ({ ...v, x: startView.x + dx, y: startView.y + dy }));
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [view],
+  );
+
+  // ---- Wheel zoom centered on cursor ------------------------------------
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const sx = ((e.clientX - rect.left) / rect.width) * W;
+      const sy = ((e.clientY - rect.top) / rect.height) * H;
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      setView((v) => {
+        const nextK = Math.max(0.4, Math.min(4, v.k * factor));
+        const r = nextK / v.k;
+        return { k: nextK, x: sx - (sx - v.x) * r, y: sy - (sy - v.y) * r };
+      });
+    };
+    svg.addEventListener('wheel', handler, { passive: false });
+    return () => svg.removeEventListener('wheel', handler);
+  }, []);
+
+  const resetView = () => setView({ k: 1, x: 0, y: 0 });
+
+  // ---- Derived: in-flight messages right now ----------------------------
   interface InFlight {
     source: string;
     target: string;

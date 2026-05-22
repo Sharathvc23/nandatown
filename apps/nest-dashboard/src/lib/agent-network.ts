@@ -17,12 +17,12 @@ export interface AgentCluster {
   coords: [number, number];
   /** Number of agents in this cluster. */
   agents: number;
-  /** Optional accent tag — e.g. "MIT", "Anthropic". */
+  /** Optional accent tag — e.g. "Project NANDA", "Anthropic". */
   affiliation?: string;
 }
 
 export const clusters: AgentCluster[] = [
-  { city: "Cambridge",  region: "US-MA", coords: [-71.106, 42.373], agents: 34, affiliation: "MIT Media Lab" },
+  { city: "Cambridge",  region: "US-MA", coords: [-71.106, 42.373], agents: 34, affiliation: "Project NANDA" },
   { city: "San Francisco", region: "US-CA", coords: [-122.419, 37.775], agents: 41 },
   { city: "New York",   region: "US-NY", coords: [-74.006, 40.713], agents: 27 },
   { city: "London",     region: "UK",    coords: [-0.128,  51.507], agents: 22 },

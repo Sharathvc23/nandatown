@@ -311,7 +311,7 @@ export default function DocsPage() {
               message in a JSONL trace you can inspect and replay.
             </p>
             <p className="mb-8 text-[1.05rem] leading-[1.7] text-ink-500">
-              NEST is built at MIT Media Lab as part of Project NANDA. It is
+              NEST is an open initiative by Project NANDA. It is
               open-source research software (Apache 2.0).
             </p>
 

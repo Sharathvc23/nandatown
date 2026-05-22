@@ -23,11 +23,12 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "NEST — Network Environment for Swarm Testing",
+  title: "NEST by Project NANDA — Network Environment for Swarm Testing",
   description:
-    "An open sandbox for testing agent protocols at scale. Built at MIT Media Lab as part of Project NANDA.",
+    "An open sandbox for testing agent protocols at scale. NEST by Project NANDA.",
   icons: {
     icon: [
+      { url: "/brand/nest-logo.png", type: "image/png" },
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
     ],

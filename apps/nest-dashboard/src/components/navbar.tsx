@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,17 +18,32 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-cream-400/60 bg-cream-100/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-6 sm:px-10">
-        {/* Wordmark — uses a slashed N reminiscent of Anthropic's wordmark */}
+        {/* Wordmark — nest icon + NEST + "by Project NANDA" + NANDA dots */}
         <Link
           href="/"
-          className="flex items-baseline gap-2 group"
-          aria-label="NEST — home"
+          className="flex items-center gap-3 group"
+          aria-label="NEST by Project NANDA — home"
         >
+          <Image
+            src="/brand/nest-logo.png"
+            alt=""
+            width={36}
+            height={36}
+            priority
+            className="h-9 w-9 object-contain"
+          />
           <span className="font-display text-[1.4rem] leading-none tracking-tight text-ink-900">
-            n<span className="text-rust">/</span>est
+            NEST
           </span>
-          <span className="hidden sm:inline-block pl-3 ml-1 border-l border-cream-400 text-[10px] font-mono uppercase tracking-[0.2em] text-ink-300 leading-none">
-            Project NANDA
+          <span className="hidden sm:inline-flex items-center gap-2 pl-3 ml-1 border-l border-cream-400 text-[10px] font-mono uppercase tracking-[0.2em] text-ink-300 leading-none">
+            by Project NANDA
+            <Image
+              src="/brand/nanda-logo.png"
+              alt="Project NANDA"
+              width={18}
+              height={18}
+              className="h-[18px] w-[18px] object-contain"
+            />
           </span>
         </Link>
 

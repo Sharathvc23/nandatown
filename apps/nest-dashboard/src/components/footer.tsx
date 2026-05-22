@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function Footer() {
@@ -8,14 +9,34 @@ export function Footer() {
           <div>
             <Link
               href="/"
-              className="font-display text-2xl tracking-tight text-ink-900"
+              className="inline-flex items-center gap-3"
+              aria-label="NEST by Project NANDA — home"
             >
-              n<span className="text-rust">/</span>est
+              <Image
+                src="/brand/nest-logo.png"
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+              />
+              <span className="font-display text-2xl tracking-tight text-ink-900">
+                NEST
+              </span>
             </Link>
             <p className="mt-5 max-w-xs text-[0.95rem] leading-relaxed text-ink-400">
               A discrete-event testbed for multi-agent protocols.
-              Built at MIT Media Lab as part of Project NANDA.
+              An open initiative by Project NANDA.
             </p>
+            <div className="mt-6 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-400">
+              <Image
+                src="/brand/nanda-logo.png"
+                alt=""
+                width={16}
+                height={16}
+                className="h-4 w-4 object-contain"
+              />
+              by Project NANDA
+            </div>
             <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
               Apache 2.0 &middot; {new Date().getFullYear()}
             </p>
@@ -59,8 +80,15 @@ export function Footer() {
             &copy; {new Date().getFullYear()} NEST · An open testbed for the
             agentic web.
           </p>
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
-            Made at MIT Media Lab
+          <p className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
+            <Image
+              src="/brand/nanda-logo.png"
+              alt=""
+              width={14}
+              height={14}
+              className="h-3.5 w-3.5 object-contain"
+            />
+            NEST by Project NANDA
           </p>
         </div>
       </div>
