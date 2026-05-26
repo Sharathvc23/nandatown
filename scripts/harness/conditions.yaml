@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+# NEST research-harness experimental conditions.
+#
+# Each top-level key under `dimensions` is an experiment factor. Cells are the
+# Cartesian product of all dimensions. Each cell gets a stable `cell_id`
+# (sha256 hex prefix of a canonical JSON dump of its factor levels), so you can
+# regenerate the same id from the same factor combination on any machine.
+#
+# Edit this file to define an experiment; the harness consumes it with
+# `scripts/harness/conditions.py:load_conditions`.
+
+# Bumped when factor names or level semantics change in a way that would
+# invalidate existing cell_ids. Recorded on every JSONL row.
+conditions_version: 1
+
+dimensions:
+  model:
+    description: "Anthropic model identifier passed to the agent runner."
+    levels:
+      - opus
+      - sonnet
+      - haiku
+
+  brief_specificity:
+    description: |
+      How much structure the brief gives the agent.
+      vague           — "improve NEST, submit a PR"
+      layer-enumerated — names the 12 protocol layers (run-1 brief)
+      open-problems    — points at docs/hackathon/problems/*.md
+    levels:
+      - vague
+      - layer-enumerated
+      - open-problems
+
+  pre_push_checklist:
+    description: |
+      Whether the agent prompt includes the explicit "run ruff/pyright/pytest
+      and only push if green" checklist. Tests calibration & iteration efficiency.
+    levels:
+      - "on"
+      - "off"
+
+# Optional defaults injected into every cell. The runner may override.
+defaults:
+  agents_per_cell: 10
+  timeout_seconds: 1800
+  seed_base: 20260526   # deterministic seed derivation: hash(cell_id, seed_base, run_idx)
+
+# Optional cell filter: skip combinations that are uninteresting / too expensive.
+# Each filter entry is a dict of dim->level that, if fully matched, drops the cell.
+skip:
+  - model: haiku
+    brief_specificity: open-problems
+    pre_push_checklist: "off"

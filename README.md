@@ -29,10 +29,16 @@ nest run marketplace
 
 That's the whole "hello world". No clone, no path, no setup.
 
+> **Before you push** (contributors only): run `make ci-local`. It runs the
+> exact CI command sequence — `uv sync`, `ruff check`, `ruff format --check`,
+> `pyright`, `pytest -v` — and hard-fails on the first red command. See the
+> [Definition of Done](CONTRIBUTING.md#definition-of-done) in `CONTRIBUTING.md`.
+
 ---
 
 ## Table of Contents
 
+- [Hackathon](#hackathon)
 - [Install](#install)
 - [The 60-second tour](#the-60-second-tour)
 - [Test your own protocol](#test-your-own-protocol)
@@ -42,9 +48,33 @@ That's the whole "hello world". No clone, no path, no setup.
 - [Fidelity tiers](#fidelity-tiers)
 - [Determinism &amp; what the clock does](#determinism--what-the-clock-does)
 - [Limitations](#limitations)
+- [Scoreboard](#scoreboard)
 - [Contributing](#contributing)
 - [Citation](#citation)
 - [License](#license)
+
+---
+
+## Hackathon
+
+NEST is hosting a month-long open hackathon. Pick one undersolved
+problem from the 12-layer stack, ship a plugin or scenario or
+validator that fixes it, prove it works under adversarial conditions.
+Every submission is scored by an automated judge panel along six
+dimensions (correctness, test rigor, API fit, docs, novelty, persona
+fidelity), each on a 1-5 scale.
+
+- [Charter](docs/hackathon/charter.md) — the participant brief: what
+  to build, the rules, branch naming.
+- [Problems](docs/hackathon/problems/) — the 10 open problems, each
+  with motivation, success criteria, anti-patterns, and the
+  reference files you'll touch.
+- [Judging](docs/hackathon/judging.md) — the six-dimension rubric
+  and how the scoreboard works.
+
+If this is your first time here, read the charter first. Scoreboard
+details and judge-panel internals are in the
+[Scoreboard](#scoreboard) section below.
 
 ---
 
@@ -314,6 +344,29 @@ Two things to know that aren't obvious:
 - **In-memory transport only out of the box.** No TCP, gRPC, or HTTP
   yet.
 - **Tier 2 is non-deterministic.** Don't use it for benchmarks.
+
+---
+
+## Scoreboard
+
+> Live scoreboard: [`docs/hackathon/scores.json`](docs/hackathon/scores.json) — machine-readable scores for every open hackathon PR. A marketplace UI on top of this file is coming.
+
+The judge panel lives in [`scripts/judge/`](scripts/judge/):
+
+- [`scripts/judge/rubric.md`](scripts/judge/rubric.md) — the rubric prompt (versioned).
+- [`scripts/judge/judge_pr.py`](scripts/judge/judge_pr.py) — score one PR with N parallel judges via the Anthropic API, with prompt caching on the rubric.
+- [`scripts/judge/run_all.py`](scripts/judge/run_all.py) — CLI that scores every open `hackathon/*` PR and writes the scoreboard JSON. Idempotent on HEAD SHA.
+
+Re-run the full scoreboard with three live Opus judges per PR:
+
+```bash
+export ANTHROPIC_API_KEY=...
+uv run python -m scripts.judge.run_all --output docs/hackathon/scores.json
+```
+
+Without an API key the CLI falls back to deterministic mock judges so the
+schema is exercised even in CI. See the in-repo PR description for the
+full cost model and how to reproduce.
 
 ---
 

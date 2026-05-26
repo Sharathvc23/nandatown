@@ -1,0 +1,15 @@
+{
+  "exit_code": 1,
+  "pr_url": null,
+  "branch": null,
+  "head_sha": null,
+  "layer_picked": "registry",
+  "lines_added": null,
+  "lines_removed": null,
+  "iterations_to_green": null,
+  "claimed_ci_green": false,
+  "actual_ci_green_first_push": null,
+  "duration_seconds": 92.0,
+  "description": null,
+  "final_message": "I attempted to add service discovery but ran into git issues; no PR opened."
+}

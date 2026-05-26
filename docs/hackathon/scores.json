@@ -1,0 +1,667 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-26T21:22:27+00:00",
+  "mock": false,
+  "submissions": [
+    {
+      "pr": 2,
+      "handle": "harvard-phd",
+      "layer": "trust",
+      "title": "[Hackathon] harvard-phd: EigenTrust plugin with checkable invariants",
+      "author": "mariagorskikh",
+      "head_sha": "4e0f4d547920ce91695d0002566dff108d491de4",
+      "head_ref": "hackathon/harvard-phd-eigentrust",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 5.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 5.0
+      },
+      "median": 26.0,
+      "consensus": "PR #2 from the harvard-phd persona scored 26.0/30 across 3 judges, with strongest dimensions test_rigor (5.0) and persona_fidelity (5.0). Judges flagged correctness (4.0) and api_fit (4.0) as the weakest areas. Lead judge summary: \"The implementation faithfully adds an EigenTrust fixed-point computation with explicit validation for alpha/max_iter/tol, empty-input handling, row normalization fallback, and cached convergence diagnostics, and it is wired into the buil....\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 5,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The implementation faithfully adds an EigenTrust fixed-point computation with explicit validation for alpha/max_iter/tol, empty-input handling, row normalization fallback, and cached convergence diagnostics, and it is wired into the built-in trust registry as `trust:eigentrust`. The tests are unusually strong: they include async public-API examples, invariant checks for simplex/row-stochasticity/fixed point, an adversarial Sybil scenario, and Hypothesis-generated trust graphs. API fit is good but not perfect because the diff registers via `nest_core.plugins._BUILTINS` rather than a `pyproject.toml` entry point, and there is no explicit Protocol conformance check beyond duck typing. Documentation is substantial in the module and trust-layer docs, with examples and the EigenTrust citation, though the PR body itself is terse and there is no runnable verification command. Minor correctness caveats include unhandled duplicate `pretrusted` IDs, which can make the seed distribution sum to less than one, and convergence being accepted after `max_iter` even for pathological tiny alpha values, but the normal/default path is solid and well tested.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 5,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The implementation faithfully adds an EigenTrust fixed-point computation with explicit validation for alpha/max_iter/tol, empty-input handling, row normalization fallback, and cached convergence diagnostics, and it is wired into the built-in trust registry as `trust:eigentrust`. The tests are unusually strong: they include async public-API examples, invariant checks for simplex/row-stochasticity/fixed point, an adversarial Sybil scenario, and Hypothesis-generated trust graphs. API fit is good but not perfect because the diff registers via `nest_core.plugins._BUILTINS` rather than a `pyproject.toml` entry point, and there is no explicit Protocol conformance check beyond duck typing. Documentation is substantial in the module and trust-layer docs, with examples and the EigenTrust citation, though the PR body itself is terse and there is no runnable verification command. Minor correctness caveats include unhandled duplicate `pretrusted` IDs, which can make the seed distribution sum to less than one, and convergence being accepted after `max_iter` even for pathological tiny alpha values, but the normal/default path is solid and well tested.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 5,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The plugin implements the EigenTrust fixed point with explicit alpha/max_iter/tol validation, row-normalization fallback for zero rows, empty-agent handling, and introspection for the trust vector and local matrix; the main caveat is that reporter authenticity is assumed rather than enforced, so the Sybil threat model in the tests is stronger than the code itself guarantees. Test rigor is high: the new test file includes conformance checks, edge cases for alpha/tolerance, fixed-point and simplex assertions, a Sybil scenario, monotonicity checks, and Hypothesis-generated trust graphs. API fit is good because it implements the trust-layer methods and is wired into the built-in plugin registry as `trust/eigentrust`, though it does not add a separate pyproject entry point and has a few minor protocol-adjacent choices such as informational-only stake and synthetic attestations. Documentation is strong in the layer docs and module/class docstrings with examples, although the PR body itself is very terse and there is no reported CI run. The work is a standard algorithm, but the NEST-specific invariant exposure, pure-Python implementation, and property checks make it more than a textbook restatement, and the citation-heavy design plus convergence/Sybil invariants fit the `harvard-phd` persona well.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 5,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The plugin implements the EigenTrust fixed point with explicit alpha/max_iter/tol validation, row-normalization fallback for zero rows, empty-agent handling, and introspection for the trust vector and local matrix; the main caveat is that reporter authenticity is assumed rather than enforced, so the Sybil threat model in the tests is stronger than the code itself guarantees. Test rigor is high: the new test file includes conformance checks, edge cases for alpha/tolerance, fixed-point and simplex assertions, a Sybil scenario, monotonicity checks, and Hypothesis-generated trust graphs. API fit is good because it implements the trust-layer methods and is wired into the built-in plugin registry as `trust/eigentrust`, though it does not add a separate pyproject entry point and has a few minor protocol-adjacent choices such as informational-only stake and synthetic attestations. Documentation is strong in the layer docs and module/class docstrings with examples, although the PR body itself is very terse and there is no reported CI run. The work is a standard algorithm, but the NEST-specific invariant exposure, pure-Python implementation, and property checks make it more than a textbook restatement, and the citation-heavy design plus convergence/Sybil invariants fit the `harvard-phd` persona well.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 5,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The plugin faithfully implements the EigenTrust fixed point with row normalization, teleport mixing, convergence diagnostics, and defensive validation for alpha/max_iter/tol, and it is wired into the built-in trust registry as `trust:eigentrust`; minor edge cases remain, such as duplicate `pretrusted` entries causing the seed distribution not to sum to one. The tests are unusually strong for this PR: they include protocol-shape checks, hand-crafted invariant tests for simplex/row-stochasticity/fixed-point behavior, a Sybil scenario, and Hypothesis properties over random trust graphs. API fit is good because the async `score`, `report`, `attest`, and `stake` methods match the existing trust shape and the built-in registry is updated, though there is no pyproject entry-point wiring and the implementation exposes some private/internal testing hooks. Documentation is substantial in `docs/layers/trust.md` and the module/class/method docstrings cite Kamvar et al. and include examples, although the PR body itself is very terse and not every public helper has an `Example::` block. The work is a standard algorithm, but the NEST-specific invariant exposure and adversarial/property tests add meaningful insight, and the paper citation plus proof-oriented comments make the `harvard-phd` persona clear in the code itself.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 5,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The plugin faithfully implements the EigenTrust fixed point with row normalization, teleport mixing, convergence diagnostics, and defensive validation for alpha/max_iter/tol, and it is wired into the built-in trust registry as `trust:eigentrust`; minor edge cases remain, such as duplicate `pretrusted` entries causing the seed distribution not to sum to one. The tests are unusually strong for this PR: they include protocol-shape checks, hand-crafted invariant tests for simplex/row-stochasticity/fixed-point behavior, a Sybil scenario, and Hypothesis properties over random trust graphs. API fit is good because the async `score`, `report`, `attest`, and `stake` methods match the existing trust shape and the built-in registry is updated, though there is no pyproject entry-point wiring and the implementation exposes some private/internal testing hooks. Documentation is substantial in `docs/layers/trust.md` and the module/class/method docstrings cite Kamvar et al. and include examples, although the PR body itself is very terse and not every public helper has an `Example::` block. The work is a standard algorithm, but the NEST-specific invariant exposure and adversarial/property tests add meaningful insight, and the paper citation plus proof-oriented comments make the `harvard-phd` persona clear in the code itself.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 3,
+      "handle": "mit-undergrad",
+      "layer": "trust",
+      "title": "[Hackathon] mit-undergrad: EigenTrust plugin for the trust layer",
+      "author": "mariagorskikh",
+      "head_sha": "0a1b071f641ecfd192a0e949807ad4678776a43d",
+      "head_ref": "hackathon/mit-undergrad-eigentrust",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 3.0,
+        "novelty": 4.0,
+        "persona_fidelity": 3.0
+      },
+      "median": 22.0,
+      "consensus": "PR #3 from the mit-undergrad persona scored 22.0/30 across 3 judges, with strongest dimensions correctness (4.0) and test_rigor (4.0). Judges flagged docs_quality (3.0) and persona_fidelity (3.0) as the weakest areas. Lead judge summary: \"The plugin implements a plausible EigenTrust-style fixed-point computation with pre-trusted seeds, exponential decay, self-report suppression, constructor validation, cache invalidation on reports, and bounded scores, but there are some ....\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 3,
+            "novelty": 4,
+            "persona_fidelity": 3
+          },
+          "rationale": "The PR adds a real EigenTrust-style trust plugin with damping, pre-trusted seeds, exponential decay, self-report suppression, parameter validation, cache invalidation on reports, and registry wiring via the built-in plugin map, so it should be usable as `trust: eigentrust`. Correctness is strong on the main path, though there are some edge-case gaps such as negative stake amounts being accepted and stake/agent registration not invalidating the trust-vector cache if the cache was already computed. The test suite is fairly rigorous for an example-based suite: it covers cold start, bounded scores, negative evidence, unknown evidence, Sybil collusion, time decay, self-reports, determinism, cache behavior, config validation, stake confidence, and registry resolution, but it has no property-based tests and checks were not reported as run. API fit is good for a bundled reference plugin and the class appears to satisfy the Trust protocol, with SPDX and `from __future__ import annotations`, but it does not add a pyproject entry point and only includes a lightweight scenario hint rather than a full scenario. Documentation is solid in the module and layer docs, but the PR body is only a one-line summary and public method docstrings lack explicit `Example::` blocks. The work is a standard but well-adapted EigenTrust implementation with NEST-specific decay/stake/cache choices; the `mit-undergrad` persona is plausible through the academic algorithm citation, but not especially distinctive in the code beyond that.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 3,\n    \"novelty\": 4,\n    \"persona_fidelity\": 3\n  },\n  \"rationale\": \"The PR adds a real EigenTrust-style trust plugin with damping, pre-trusted seeds, exponential decay, self-report suppression, parameter validation, cache invalidation on reports, and registry wiring via the built-in plugin map, so it should be usable as `trust: eigentrust`. Correctness is strong on the main path, though there are some edge-case gaps such as negative stake amounts being accepted and stake/agent registration not invalidating the trust-vector cache if the cache was already computed. The test suite is fairly rigorous for an example-based suite: it covers cold start, bounded scores, negative evidence, unknown evidence, Sybil collusion, time decay, self-reports, determinism, cache behavior, config validation, stake confidence, and registry resolution, but it has no property-based tests and checks were not reported as run. API fit is good for a bundled reference plugin and the class appears to satisfy the Trust protocol, with SPDX and `from __future__ import annotations`, but it does not add a pyproject entry point and only includes a lightweight scenario hint rather than a full scenario. Documentation is solid in the module and layer docs, but the PR body is only a one-line summary and public method docstrings lack explicit `Example::` blocks. The work is a standard but well-adapted EigenTrust implementation with NEST-specific decay/stake/cache choices; the `mit-undergrad` persona is plausible through the academic algorithm citation, but not especially distinctive in the code beyond that.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 3,
+            "novelty": 4,
+            "persona_fidelity": 3
+          },
+          "rationale": "The plugin implements the advertised EigenTrust-style fixed-point computation with pre-trusted seeds, exponential decay, lazy cache invalidation, registry wiring, and parameter validation for alpha/decay/max_iters; however, some edge cases remain, such as negative stake amounts being accepted and potentially reducing confidence below the expected range, and self-reports being ignored in the matrix but still counted toward sample_count/confidence. The tests are fairly strong example-based coverage, including Sybil-collusion behavior, time decay, self-reports, determinism, cache consistency, config validation, staking confidence, and registry resolution, but there are no property-based tests or fuzzing. API fit is good because it exposes the same async trust methods, uses nest_core types, SPDX/future annotations, and resolves through PluginRegistry as trust/eigentrust, though the diff wires it as a builtin rather than showing a pyproject entry point. Documentation includes a solid module docstring, citation, design explanation, and trust-layer docs with YAML usage, but the PR body is only a terse sentence and public methods lack Example:: blocks. Novelty is above average for combining a standard EigenTrust algorithm with NEST-specific decay, stake-confidence, and lazy recompute choices, while the mit-undergrad persona is plausible through the academic citation and clean tests but not especially distinctive in the code itself.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":3,\"novelty\":4,\"persona_fidelity\":3},\"rationale\":\"The plugin implements the advertised EigenTrust-style fixed-point computation with pre-trusted seeds, exponential decay, lazy cache invalidation, registry wiring, and parameter validation for alpha/decay/max_iters; however, some edge cases remain, such as negative stake amounts being accepted and potentially reducing confidence below the expected range, and self-reports being ignored in the matrix but still counted toward sample_count/confidence. The tests are fairly strong example-based coverage, including Sybil-collusion behavior, time decay, self-reports, determinism, cache consistency, config validation, staking confidence, and registry resolution, but there are no property-based tests or fuzzing. API fit is good because it exposes the same async trust methods, uses nest_core types, SPDX/future annotations, and resolves through PluginRegistry as trust/eigentrust, though the diff wires it as a builtin rather than showing a pyproject entry point. Documentation includes a solid module docstring, citation, design explanation, and trust-layer docs with YAML usage, but the PR body is only a terse sentence and public methods lack Example:: blocks. Novelty is above average for combining a standard EigenTrust algorithm with NEST-specific decay, stake-confidence, and lazy recompute choices, while the mit-undergrad persona is plausible through the academic citation and clean tests but not especially distinctive in the code itself.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 3
+          },
+          "rationale": "The plugin implements a plausible EigenTrust-style fixed-point computation with pre-trusted seeds, exponential decay, self-report suppression, constructor validation, cache invalidation on reports, and bounded scores, but there are some edge-case gaps such as negative stake being accepted and stake not raising confidence for cold-start non-pretrusted agents despite the stated confidence-floor claim. Tests are substantial and exercise the public async API, registry resolution, Sybil collusion, decay, self-reports, determinism, caching, and invalid configuration, though they are example-based only and do not include Hypothesis/property tests. API fit is good for a bundled reference plugin because it implements the Trust methods and is wired into `nest_core.plugins._BUILTINS` as `trust/eigentrust`, but there is no `pyproject.toml` entry point addition and exact compatibility with all scenario loading paths is not fully shown. Documentation is stronger than the one-line PR body: `docs/layers/trust.md` explains usage and the module/class/method docstrings describe the algorithm and tradeoffs, but public methods lack `Example::` blocks and there is no runnable verification command. Novelty is above average because it adapts textbook EigenTrust with time decay, seed damping, stake-based confidence, lazy recomputation, and adversarial tests, while persona fidelity is mostly generic academically solid implementation rather than something uniquely legible as `mit-undergrad`.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 3\n  },\n  \"rationale\": \"The plugin implements a plausible EigenTrust-style fixed-point computation with pre-trusted seeds, exponential decay, self-report suppression, constructor validation, cache invalidation on reports, and bounded scores, but there are some edge-case gaps such as negative stake being accepted and stake not raising confidence for cold-start non-pretrusted agents despite the stated confidence-floor claim. Tests are substantial and exercise the public async API, registry resolution, Sybil collusion, decay, self-reports, determinism, caching, and invalid configuration, though they are example-based only and do not include Hypothesis/property tests. API fit is good for a bundled reference plugin because it implements the Trust methods and is wired into `nest_core.plugins._BUILTINS` as `trust/eigentrust`, but there is no `pyproject.toml` entry point addition and exact compatibility with all scenario loading paths is not fully shown. Documentation is stronger than the one-line PR body: `docs/layers/trust.md` explains usage and the module/class/method docstrings describe the algorithm and tradeoffs, but public methods lack `Example::` blocks and there is no runnable verification command. Novelty is above average because it adapts textbook EigenTrust with time decay, seed damping, stake-based confidence, lazy recomputation, and adversarial tests, while persona fidelity is mostly generic academically solid implementation rather than something uniquely legible as `mit-undergrad`.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 4,
+      "handle": "openai-llm",
+      "layer": "memory",
+      "title": "[Hackathon] openai-llm: semantic memory plugin (recall + TTL + LRU)",
+      "author": "mariagorskikh",
+      "head_sha": "cedd3e04c5d86508aaab3d5ed9f2bf1e051486e8",
+      "head_ref": "hackathon/openai-llm-semantic-memory",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 4.0
+      },
+      "median": 24.0,
+      "consensus": "PR #4 from the openai-llm persona scored 24.0/30 across 3 judges, with strongest dimensions correctness (4.0) and test_rigor (4.0). Judges flagged correctness (4.0) and test_rigor (4.0) as the weakest areas. Lead judge summary: \"The PR implements a real SemanticMemory plugin with read/write/subscribe/cas plus recall, TTL, LRU, validation for invalid capacity/ttl, deterministic FNV-based embeddings, and built-in registry wiring for memory:semantic.\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 4
+          },
+          "rationale": "The PR implements a real SemanticMemory plugin with read/write/subscribe/cas plus recall, TTL, LRU, validation for invalid capacity/ttl, deterministic FNV-based embeddings, and built-in registry wiring for memory:semantic. The main correctness concern is that the docstring says the internal logical clock advances on every write and recall, but recall calls _now() without advance=True, so default TTL behavior only progresses on writes unless an external now_fn is supplied; this edge is not tested. The tests are broad example-based coverage across protocol compatibility, ranking, determinism, min_score, k=0, LRU, recall-protected eviction, TTL with external clocks, overwrite TTL reset, binary payloads, protocol isinstance, and registry resolution, but there is no property-based or adversarial testing. API fit is good for a reference built-in plugin and the class structurally satisfies Memory, though it is not registered via pyproject entry points and the extra recall/forget/stats surface is outside the base protocol. Documentation is strong in the new memory docs and class/module docstrings with examples, but the PR body itself is only a one-line summary and lacks verification instructions. Novelty and persona fidelity are above average because the deterministic hashed token/trigram embedder plus TTL/LRU capacity pressure is a sensible LLM-agent/NEST adaptation rather than a generic KV store, but it is still a standard lightweight vector-memory design rather than a deeply novel algorithm.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 4\n  },\n  \"rationale\": \"The PR implements a real SemanticMemory plugin with read/write/subscribe/cas plus recall, TTL, LRU, validation for invalid capacity/ttl, deterministic FNV-based embeddings, and built-in registry wiring for memory:semantic. The main correctness concern is that the docstring says the internal logical clock advances on every write and recall, but recall calls _now() without advance=True, so default TTL behavior only progresses on writes unless an external now_fn is supplied; this edge is not tested. The tests are broad example-based coverage across protocol compatibility, ranking, determinism, min_score, k=0, LRU, recall-protected eviction, TTL with external clocks, overwrite TTL reset, binary payloads, protocol isinstance, and registry resolution, but there is no property-based or adversarial testing. API fit is good for a reference built-in plugin and the class structurally satisfies Memory, though it is not registered via pyproject entry points and the extra recall/forget/stats surface is outside the base protocol. Documentation is strong in the new memory docs and class/module docstrings with examples, but the PR body itself is only a one-line summary and lacks verification instructions. Novelty and persona fidelity are above average because the deterministic hashed token/trigram embedder plus TTL/LRU capacity pressure is a sensible LLM-agent/NEST adaptation rather than a generic KV store, but it is still a standard lightweight vector-memory design rather than a deeply novel algorithm.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 4
+          },
+          "rationale": "The plugin largely delivers the claimed semantic memory surface: it implements read/write/subscribe/cas, deterministic hashed-trigram recall, TTL sweeping, LRU eviction, stats, and registration via the built-in plugin registry as memory:semantic. There is a small correctness/documentation mismatch: the class docstring says the internal logical clock advances on every write and recall, but recall calls _now() without advance=True, so internal-TTL behavior only progresses on writes unless an external now_fn is supplied. Tests are extensive example-based coverage for protocol compatibility, registry resolution, recall ranking/determinism, min_score, k=0, LRU, TTL, overwrite, binary payloads, and invalid constructor args, but there are no property-based or fuzz/adversarial tests. API fit is good for a reference built-in and includes SPDX, future annotations, Protocol conformance testing, and registry wiring, though it does not add a pyproject entry point and exposes extra methods beyond the Memory protocol. Documentation is strong in code and layer docs with examples, but the PR body itself is minimal and there is no runnable scenario/verification command. The deterministic local embedding plus TTL/LRU is a thoughtful NEST-specific adaptation for LLM/RAG agents, making the openai-llm persona visible, though the core approach is still a standard lightweight vector-store pattern.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":4},\"rationale\":\"The plugin largely delivers the claimed semantic memory surface: it implements read/write/subscribe/cas, deterministic hashed-trigram recall, TTL sweeping, LRU eviction, stats, and registration via the built-in plugin registry as memory:semantic. There is a small correctness/documentation mismatch: the class docstring says the internal logical clock advances on every write and recall, but recall calls _now() without advance=True, so internal-TTL behavior only progresses on writes unless an external now_fn is supplied. Tests are extensive example-based coverage for protocol compatibility, registry resolution, recall ranking/determinism, min_score, k=0, LRU, TTL, overwrite, binary payloads, and invalid constructor args, but there are no property-based or fuzz/adversarial tests. API fit is good for a reference built-in and includes SPDX, future annotations, Protocol conformance testing, and registry wiring, though it does not add a pyproject entry point and exposes extra methods beyond the Memory protocol. Documentation is strong in code and layer docs with examples, but the PR body itself is minimal and there is no runnable scenario/verification command. The deterministic local embedding plus TTL/LRU is a thoughtful NEST-specific adaptation for LLM/RAG agents, making the openai-llm persona visible, though the core approach is still a standard lightweight vector-store pattern.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 4
+          },
+          "rationale": "The PR adds a real semantic memory implementation with deterministic hashed token/trigram embeddings, exact-key read/write/subscribe/CAS, recall ranking, TTL, LRU eviction, stats, and registry wiring via the built-in plugin map for memory:semantic. The main correctness concern is that the docstring says the internal logical clock advances on every write and recall, but _now(advance=True) is only used in write, so TTL does not progress across recalls when no external now_fn is supplied; CAS behavior for absent/expired keys is also narrower than some CAS protocols but may match this repo. Tests are extensive example-based coverage of recall ranking, determinism, min_score, k=0, LRU, TTL with external clock, overwrite TTL reset, binary payloads, invalid args, protocol conformance, and registry resolution, but there are no property-based or fuzz/adversarial tests. API fit is strong for a built-in reference plugin, with SPDX, future annotations, Protocol conformance test, and docs, though it is not registered through pyproject entry points and adds extra surface beyond the Memory protocol. Documentation is much better than the one-line PR body because docs/layers/memory.md and the module docstring explain motivation, design tradeoffs, and examples, but there is no runnable scenario command. Novelty and persona fidelity are above average: deterministic semantic recall plus TTL/LRU is a useful LLM-agent memory adaptation for NEST rather than a plain vector-store wrapper, though it remains a standard hashed-embedding baseline rather than a deeply novel algorithm.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 4\n  },\n  \"rationale\": \"The PR adds a real semantic memory implementation with deterministic hashed token/trigram embeddings, exact-key read/write/subscribe/CAS, recall ranking, TTL, LRU eviction, stats, and registry wiring via the built-in plugin map for memory:semantic. The main correctness concern is that the docstring says the internal logical clock advances on every write and recall, but _now(advance=True) is only used in write, so TTL does not progress across recalls when no external now_fn is supplied; CAS behavior for absent/expired keys is also narrower than some CAS protocols but may match this repo. Tests are extensive example-based coverage of recall ranking, determinism, min_score, k=0, LRU, TTL with external clock, overwrite TTL reset, binary payloads, invalid args, protocol conformance, and registry resolution, but there are no property-based or fuzz/adversarial tests. API fit is strong for a built-in reference plugin, with SPDX, future annotations, Protocol conformance test, and docs, though it is not registered through pyproject entry points and adds extra surface beyond the Memory protocol. Documentation is much better than the one-line PR body because docs/layers/memory.md and the module docstring explain motivation, design tradeoffs, and examples, but there is no runnable scenario command. Novelty and persona fidelity are above average: deterministic semantic recall plus TTL/LRU is a useful LLM-agent memory adaptation for NEST rather than a plain vector-store wrapper, though it remains a standard hashed-embedding baseline rather than a deeply novel algorithm.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 5,
+      "handle": "cmu-robotics",
+      "layer": "coordination",
+      "title": "[Hackathon] cmu-robotics: sealed-bid auction coordination plugin (first-price + Vickrey)",
+      "author": "mariagorskikh",
+      "head_sha": "d94772e0c817b48ec90fcac4760bc612c807c014",
+      "head_ref": "hackathon/cmu-robotics-sealed-bid-coordination",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 3.0
+      },
+      "median": 23.0,
+      "consensus": "PR #5 from the cmu-robotics persona scored 23.0/30 across 3 judges, with strongest dimensions correctness (4.0) and test_rigor (4.0). Judges flagged persona_fidelity (3.0) and correctness (4.0) as the weakest areas. Lead judge summary: \"The plugin correctly implements the main sealed-bid behavior claimed: first-price and Vickrey payment rules, reserve handling, deterministic tie-breaking, duplicate/negative bid rejection, empty rounds, and idempotent resolution are all ....\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 3,
+            "persona_fidelity": 3
+          },
+          "rationale": "The plugin implements the claimed first-price and Vickrey sealed-bid mechanisms with reserve handling, deterministic lexicographic tie-breaking, duplicate/negative bid rejection, idempotent resolve, and companion validators for efficiency, IR, reserve, payment, and single-winner properties. A notable correctness gap is that commit() only marks the Outcome metadata as committed and does not actually transition the Round to committed, so the documented round lifecycle and \"after commit the round is sealed\" behavior is not enforced unless callers manually mutate round.metadata as the test does. The tests are extensive example-based coverage plus a deterministic randomized swarm sweep and registry checks, but they do not use Hypothesis or true fuzzing despite being close to property-style tests. API fit is good because it uses nest_core types, async propose/participate/resolve/commit methods, SPDX/from-future, and built-in registry wiring, though there is no pyproject entry point and participate adds a plugin-specific optional value parameter. Documentation in the module and layer page is strong with Example blocks and YAML, but the PR body itself is only a one-line summary and lacks verification instructions. The mechanism is standard but well adapted to NEST coordination with validators; the CMU robotics persona is plausible via task allocation/auction coordination, though the implementation is generic mechanism design rather than distinctly robotics-specific.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 3,\n    \"persona_fidelity\": 3\n  },\n  \"rationale\": \"The plugin implements the claimed first-price and Vickrey sealed-bid mechanisms with reserve handling, deterministic lexicographic tie-breaking, duplicate/negative bid rejection, idempotent resolve, and companion validators for efficiency, IR, reserve, payment, and single-winner properties. A notable correctness gap is that commit() only marks the Outcome metadata as committed and does not actually transition the Round to committed, so the documented round lifecycle and \\\"after commit the round is sealed\\\" behavior is not enforced unless callers manually mutate round.metadata as the test does. The tests are extensive example-based coverage plus a deterministic randomized swarm sweep and registry checks, but they do not use Hypothesis or true fuzzing despite being close to property-style tests. API fit is good because it uses nest_core types, async propose/participate/resolve/commit methods, SPDX/from-future, and built-in registry wiring, though there is no pyproject entry point and participate adds a plugin-specific optional value parameter. Documentation in the module and layer page is strong with Example blocks and YAML, but the PR body itself is only a one-line summary and lacks verification instructions. The mechanism is standard but well adapted to NEST coordination with validators; the CMU robotics persona is plausible via task allocation/auction coordination, though the implementation is generic mechanism design rather than distinctly robotics-specific.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 3
+          },
+          "rationale": "The plugin correctly implements the main sealed-bid behavior claimed: first-price and Vickrey payment rules, reserve handling, deterministic tie-breaking, duplicate/negative bid rejection, empty rounds, and idempotent resolution are all covered in code and tests. One notable lifecycle gap is that commit() only marks the Outcome metadata as committed and cannot update the Round, so the documented claim that commit seals the round and makes re-resolution raise is not actually true unless callers manually mutate round.metadata, as the test itself does. Test coverage is strong, with many async behavioral and mechanism-design cases plus a randomized sweep and registry checks, though it is not true hypothesis/property-based testing and does not fuzz malformed metadata. API fit is good via the built-in registry and apparent Coordination protocol methods, but it is wired through _BUILTINS rather than a pyproject entry point and commit semantics are somewhat awkward. Documentation in code and layer docs is extensive with examples, but the PR body itself is only a terse one-liner. Novelty is above average for a standard auction because of the NEST-specific validators and invariant checks, while the cmu-robotics persona is plausible through coordination/swarm-style auctions but not deeply reflected beyond the problem choice.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 3\n  },\n  \"rationale\": \"The plugin correctly implements the main sealed-bid behavior claimed: first-price and Vickrey payment rules, reserve handling, deterministic tie-breaking, duplicate/negative bid rejection, empty rounds, and idempotent resolution are all covered in code and tests. One notable lifecycle gap is that commit() only marks the Outcome metadata as committed and cannot update the Round, so the documented claim that commit seals the round and makes re-resolution raise is not actually true unless callers manually mutate round.metadata, as the test itself does. Test coverage is strong, with many async behavioral and mechanism-design cases plus a randomized sweep and registry checks, though it is not true hypothesis/property-based testing and does not fuzz malformed metadata. API fit is good via the built-in registry and apparent Coordination protocol methods, but it is wired through _BUILTINS rather than a pyproject entry point and commit semantics are somewhat awkward. Documentation in code and layer docs is extensive with examples, but the PR body itself is only a terse one-liner. Novelty is above average for a standard auction because of the NEST-specific validators and invariant checks, while the cmu-robotics persona is plausible through coordination/swarm-style auctions but not deeply reflected beyond the problem choice.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 3
+          },
+          "rationale": "The plugin implements the claimed first-price and Vickrey sealed-bid mechanisms with reserve handling, deterministic lexicographic tie-breaking, duplicate/negative bid rejection, idempotent resolve, and validator helpers, but the commit lifecycle is weaker than documented because commit only mutates Outcome metadata and cannot itself mark the Round committed; the test for resolve-after-commit has to manually flip round.metadata['status']. The test suite is substantial, covering both mechanisms, reserves, ties, no bidders, duplicate bids, registry wiring, and a deterministic randomized swarm sweep, though it does not use Hypothesis or truly adversarial/malformed metadata inputs. API fit is good: it uses nest_core types, structural coordination methods, SPDX/future annotations, and built-in registry wiring for coordination/sealed_bid, but there is no pyproject entry point despite the docstring claiming entry-point registration. Documentation is strong in module/class/method docstrings and coordination docs with examples, but the PR body itself is only a one-line summary and lacks verification commands. Novelty is above average for a standard auction because the PR adds NEST-specific lifecycle metadata and mechanism-design validators, while persona fidelity is plausible for cmu-robotics task-allocation coordination but not deeply robotics-specific in the implementation.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":3},\"rationale\":\"The plugin implements the claimed first-price and Vickrey sealed-bid mechanisms with reserve handling, deterministic lexicographic tie-breaking, duplicate/negative bid rejection, idempotent resolve, and validator helpers, but the commit lifecycle is weaker than documented because commit only mutates Outcome metadata and cannot itself mark the Round committed; the test for resolve-after-commit has to manually flip round.metadata['status']. The test suite is substantial, covering both mechanisms, reserves, ties, no bidders, duplicate bids, registry wiring, and a deterministic randomized swarm sweep, though it does not use Hypothesis or truly adversarial/malformed metadata inputs. API fit is good: it uses nest_core types, structural coordination methods, SPDX/future annotations, and built-in registry wiring for coordination/sealed_bid, but there is no pyproject entry point despite the docstring claiming entry-point registration. Documentation is strong in module/class/method docstrings and coordination docs with examples, but the PR body itself is only a one-line summary and lacks verification commands. Novelty is above average for a standard auction because the PR adds NEST-specific lifecycle metadata and mechanism-design validators, while persona fidelity is plausible for cmu-robotics task-allocation coordination but not deeply robotics-specific in the implementation.\"}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 6,
+      "handle": "stanford-ml-phd",
+      "layer": "trust",
+      "title": "[Hackathon] stanford-ml-phd: EigenTrust plugin for the trust layer",
+      "author": "mariagorskikh",
+      "head_sha": "cb9225fe7d0476baef09bc9acc0b69398fb3f936",
+      "head_ref": "hackathon/stanford-ml-phd-eigentrust",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 5.0
+      },
+      "median": 25.0,
+      "consensus": "PR #6 from the stanford-ml-phd persona scored 25.0/30 across 3 judges, with strongest dimensions persona_fidelity (5.0) and correctness (4.0). Judges flagged correctness (4.0) and test_rigor (4.0) as the weakest areas. Lead judge summary: \"The plugin implements a real sparse EigenTrust-style power iteration with teleport smoothing, sink handling, stable ordering, lazy recomputation, and validation for alpha, tolerance, and iteration caps; the main caveat is that the unconf....\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 3,
+            "persona_fidelity": 5
+          },
+          "rationale": "The implementation is a faithful sparse EigenTrust/PageRank-style power iteration with alpha validation, sink handling, stable ordering for determinism, lazy recomputation, neutral unknown-agent behavior, and a raw global vector that is normalized against floating-point drift. The main correctness caveat is that the default with no pre-trusted seed falls back to a uniform distribution over all observed agents, which weakens the blanket Sybil-resistance claim for the built-in `eigentrust` configuration. Tests are strong example/adversarial tests covering Sybil cliques, self-vouching, distrusted reporters, seed propagation, determinism, sum-to-one, convergence, and lazy recompute, but they are not property-based/fuzz tests. API fit is good because the plugin implements the trust methods and is wired into `_BUILTINS`, though no `pyproject.toml` entry point is added and configuration of pre-trusted seeds is not demonstrated in a scenario. Documentation and code comments are unusually thorough, with paper citations and `Example::` docstrings, but the PR body itself is minimal and verification is mostly in the test file rather than the PR text. The work is a standard algorithm well adapted to NEST rather than fundamentally novel, while the ML PhD persona is clear in the eigenvector formulation, citations, convergence discussion, and invariant-style tests.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 3,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The implementation is a faithful sparse EigenTrust/PageRank-style power iteration with alpha validation, sink handling, stable ordering for determinism, lazy recomputation, neutral unknown-agent behavior, and a raw global vector that is normalized against floating-point drift. The main correctness caveat is that the default with no pre-trusted seed falls back to a uniform distribution over all observed agents, which weakens the blanket Sybil-resistance claim for the built-in `eigentrust` configuration. Tests are strong example/adversarial tests covering Sybil cliques, self-vouching, distrusted reporters, seed propagation, determinism, sum-to-one, convergence, and lazy recompute, but they are not property-based/fuzz tests. API fit is good because the plugin implements the trust methods and is wired into `_BUILTINS`, though no `pyproject.toml` entry point is added and configuration of pre-trusted seeds is not demonstrated in a scenario. Documentation and code comments are unusually thorough, with paper citations and `Example::` docstrings, but the PR body itself is minimal and verification is mostly in the test file rather than the PR text. The work is a standard algorithm well adapted to NEST rather than fundamentally novel, while the ML PhD persona is clear in the eigenvector formulation, citations, convergence discussion, and invariant-style tests.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The plugin implements a real sparse EigenTrust-style power iteration with teleport smoothing, sink handling, stable ordering, lazy recomputation, and validation for alpha, tolerance, and iteration caps; the main caveat is that the unconfigured default falls back to a uniform seed distribution, so the README's unqualified Sybil-resistance claim is stronger than what default `trust: eigentrust` provides. Tests are substantial and exercise the public async Trust API, adversarial Sybil/self-vouching cases, determinism, sum-to-one invariants, and convergence, but they are example-based only and include no Hypothesis/property-based fuzzing, with no CI check runs reported. API fit is strong via the built-in resolver entry in `nest_core/plugins.py`, matching ScoreAverage-style constructor and Trust methods, though it is not exposed as a separate `pyproject.toml` entry point and no scenario YAML is added. Documentation in the new module is excellent, with citations, design rationale, and Example blocks, and the trust layer docs are updated, but the PR body itself is only a terse one-liner and verification is mostly in the test file. The work is a standard algorithm, but the NEST-specific adaptations around reporter weighting, seed fallback, caching, and adversarial tests are thoughtful, and the cited paper/eigenvector/convergence framing makes the stanford-ml-phd persona highly legible.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The plugin implements a real sparse EigenTrust-style power iteration with teleport smoothing, sink handling, stable ordering, lazy recomputation, and validation for alpha, tolerance, and iteration caps; the main caveat is that the unconfigured default falls back to a uniform seed distribution, so the README's unqualified Sybil-resistance claim is stronger than what default `trust: eigentrust` provides. Tests are substantial and exercise the public async Trust API, adversarial Sybil/self-vouching cases, determinism, sum-to-one invariants, and convergence, but they are example-based only and include no Hypothesis/property-based fuzzing, with no CI check runs reported. API fit is strong via the built-in resolver entry in `nest_core/plugins.py`, matching ScoreAverage-style constructor and Trust methods, though it is not exposed as a separate `pyproject.toml` entry point and no scenario YAML is added. Documentation in the new module is excellent, with citations, design rationale, and Example blocks, and the trust layer docs are updated, but the PR body itself is only a terse one-liner and verification is mostly in the test file. The work is a standard algorithm, but the NEST-specific adaptations around reporter weighting, seed fallback, caching, and adversarial tests are thoughtful, and the cited paper/eigenvector/convergence framing makes the stanford-ml-phd persona highly legible.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The implementation delivers a plausible EigenTrust trust-layer plugin with sparse power iteration, teleport/pre-trusted seed handling, lazy recomputation, validation for alpha/iteration/tolerance parameters, neutral handling for unknown agents, and explicit sink redistribution; I do not see an obvious happy-path bug, though the public `score` rescales the raw eigenvector by the maximum rather than returning the sum-to-one trust mass, which is a documented but debatable semantic choice. Tests are substantial and include protocol behavior, Sybil/self-vouching adversarial cases, seed behavior, determinism, sum-to-one, convergence, and cache behavior, but they are all example-based with no Hypothesis/property fuzzing. API fit is good because it matches the apparent Trust methods and is wired into `_BUILTINS` as `(\"trust\", \"eigentrust\")`, with SPDX and `from __future__ import annotations`, but there is no `pyproject.toml` entry point shown and no scenario file update. Documentation is strong in the module/class/method docstrings with examples and the trust-layer docs are updated, but the PR body itself is only a single sentence and verification is mostly in the test file. The algorithm is a standard EigenTrust/PageRank-style approach, but the NEST-specific adaptations around pre-trusted seeds, deterministic ordering, cache invalidation, sink handling, and adversarial tests show thoughtful application; the paper citations and convergence/invariant focus make the Stanford ML PhD persona very legible.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":5},\"rationale\":\"The implementation delivers a plausible EigenTrust trust-layer plugin with sparse power iteration, teleport/pre-trusted seed handling, lazy recomputation, validation for alpha/iteration/tolerance parameters, neutral handling for unknown agents, and explicit sink redistribution; I do not see an obvious happy-path bug, though the public `score` rescales the raw eigenvector by the maximum rather than returning the sum-to-one trust mass, which is a documented but debatable semantic choice. Tests are substantial and include protocol behavior, Sybil/self-vouching adversarial cases, seed behavior, determinism, sum-to-one, convergence, and cache behavior, but they are all example-based with no Hypothesis/property fuzzing. API fit is good because it matches the apparent Trust methods and is wired into `_BUILTINS` as `(\\\"trust\\\", \\\"eigentrust\\\")`, with SPDX and `from __future__ import annotations`, but there is no `pyproject.toml` entry point shown and no scenario file update. Documentation is strong in the module/class/method docstrings with examples and the trust-layer docs are updated, but the PR body itself is only a single sentence and verification is mostly in the test file. The algorithm is a standard EigenTrust/PageRank-style approach, but the NEST-specific adaptations around pre-trusted seeds, deterministic ordering, cache invalidation, sink handling, and adversarial tests show thoughtful application; the paper citations and convergence/invariant focus make the Stanford ML PhD persona very legible.\"}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 7,
+      "handle": "coinbase-crypto",
+      "layer": "payments",
+      "title": "[Hackathon] coinbase-crypto: htlc_escrow payments plugin (hash- & time-locked conditional payments)",
+      "author": "mariagorskikh",
+      "head_sha": "56514b86c461a34234ba1185c46d24ed6422626a",
+      "head_ref": "hackathon/coinbase-crypto-htlc-escrow",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 5.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 5.0
+      },
+      "median": 26.0,
+      "consensus": "PR #7 from the coinbase-crypto persona scored 26.0/30 across 3 judges, with strongest dimensions test_rigor (5.0) and persona_fidelity (5.0). Judges flagged correctness (4.0) and api_fit (4.0) as the weakest areas. Lead judge summary: \"The plugin implements the claimed HTLC flow with escrow debit/credit accounting, SHA-256 preimage validation, expiry-based refund, duplicate-ref rejection, auto-settle compatibility, and explicit conservation checks; minor correctness ga....\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 5,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The plugin implements the claimed HTLC flow with escrow debit/credit accounting, SHA-256 preimage validation, expiry-based refund, duplicate-ref rejection, auto-settle compatibility, and explicit conservation checks; minor correctness gaps remain around non-positive timelocks, loose hashlock type validation, and the documented payer-only refund authority not being enforced by handle identity. Test rigor is strong: the new test file covers happy paths, malformed hashlocks, insufficient funds, wrong preimages, double-claim/refund attacks, registry resolution, and Hypothesis properties for conservation and exactly-one terminal state, though no CI check run is reported. API fit is good for a bundled reference plugin via `nest_core.plugins._BUILTINS`, with SPDX, future annotations, and base-method compatibility, but it is not wired through a `pyproject.toml` entry point and extends `pay()` with HTLC-specific kwargs. Documentation is substantial in the module docstring and payments docs with YAML/Python examples, but the PR body itself is only a one-line summary and lacks a verification command. The idea is a standard crypto primitive rather than novel research, but the NEST-specific drop-in auto-claim mode, logical clock, escrow sentinel, and invariant/property testing are thoughtful adaptations, and the Coinbase/crypto persona is very clear in both the implementation focus and adversarial ledger tests.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":5,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":5},\"rationale\":\"The plugin implements the claimed HTLC flow with escrow debit/credit accounting, SHA-256 preimage validation, expiry-based refund, duplicate-ref rejection, auto-settle compatibility, and explicit conservation checks; minor correctness gaps remain around non-positive timelocks, loose hashlock type validation, and the documented payer-only refund authority not being enforced by handle identity. Test rigor is strong: the new test file covers happy paths, malformed hashlocks, insufficient funds, wrong preimages, double-claim/refund attacks, registry resolution, and Hypothesis properties for conservation and exactly-one terminal state, though no CI check run is reported. API fit is good for a bundled reference plugin via `nest_core.plugins._BUILTINS`, with SPDX, future annotations, and base-method compatibility, but it is not wired through a `pyproject.toml` entry point and extends `pay()` with HTLC-specific kwargs. Documentation is substantial in the module docstring and payments docs with YAML/Python examples, but the PR body itself is only a one-line summary and lacks a verification command. The idea is a standard crypto primitive rather than novel research, but the NEST-specific drop-in auto-claim mode, logical clock, escrow sentinel, and invariant/property testing are thoughtful adaptations, and the Coinbase/crypto persona is very clear in both the implementation focus and adversarial ledger tests.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 5,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The HTLC implementation faithfully covers the core claims: funds are escrowed on pay, SHA-256 preimages release funds, expiry enables refund, duplicate refs and malformed hashlocks are rejected, and conservation is checked with explicit escrow accounting. There are a few non-fatal gaps that keep correctness from a 5, notably no validation that timelock_ticks is positive and refund_expired does not enforce the documented caller/payer restriction, though funds are still returned to the payer. The tests are unusually strong for a hackathon PR, with many async examples, adversarial double-spend/griefing cases, registry resolution, and Hypothesis properties for conservation and exactly-one terminal state. API fit is good via the builtin registry and compatibility auto-claim path, but the pay signature adds HTLC-specific keyword arguments rather than being an exact Protocol match/entry-point-style plugin. Documentation is extensive in module and layer docs with examples, though the PR body itself is minimal. The submission is a standard crypto primitive but well adapted to NEST with deterministic secrets, conservation invariants, and Coinbase-like ledger discipline, making the coinbase-crypto persona very legible.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 5,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The HTLC implementation faithfully covers the core claims: funds are escrowed on pay, SHA-256 preimages release funds, expiry enables refund, duplicate refs and malformed hashlocks are rejected, and conservation is checked with explicit escrow accounting. There are a few non-fatal gaps that keep correctness from a 5, notably no validation that timelock_ticks is positive and refund_expired does not enforce the documented caller/payer restriction, though funds are still returned to the payer. The tests are unusually strong for a hackathon PR, with many async examples, adversarial double-spend/griefing cases, registry resolution, and Hypothesis properties for conservation and exactly-one terminal state. API fit is good via the builtin registry and compatibility auto-claim path, but the pay signature adds HTLC-specific keyword arguments rather than being an exact Protocol match/entry-point-style plugin. Documentation is extensive in module and layer docs with examples, though the PR body itself is minimal. The submission is a standard crypto primitive but well adapted to NEST with deterministic secrets, conservation invariants, and Coinbase-like ledger discipline, making the coinbase-crypto persona very legible.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 5,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The plugin implements the claimed HTLC flow with SHA-256 hashlocks, expiry checks, escrow accounting, duplicate-ref rejection, auto-settle compatibility, and explicit conservation checks; minor gaps include no validation that timelock_ticks is positive and a doc/code mismatch around refund_expired being payer-only. The tests are unusually strong: they cover happy paths, malformed hashlocks, insufficient balances, duplicate/double-spend attempts, claim-after-refund/refund-after-claim adversarial cases, registry resolution, and Hypothesis properties for conservation and exactly-one terminal state. API fit is good because it uses nest_core types, has SPDX/from __future__, registers in the built-in plugin registry, and remains compatible with pay(to, amount, ref), but it does not add a pyproject entry point and extends the pay signature with HTLC kwargs. Documentation is solid in code and docs/layers/payments.md with examples and YAML, though the PR body itself is only a one-line summary and there is no explicit runnable verification command. The idea is a standard crypto primitive, but applying it as a drop-in NEST payments layer with conservation/property tests and deterministic preimage helpers shows meaningful domain adaptation, and the ledger/HTLC/adversarial testing focus strongly matches the coinbase-crypto persona.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 5,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The plugin implements the claimed HTLC flow with SHA-256 hashlocks, expiry checks, escrow accounting, duplicate-ref rejection, auto-settle compatibility, and explicit conservation checks; minor gaps include no validation that timelock_ticks is positive and a doc/code mismatch around refund_expired being payer-only. The tests are unusually strong: they cover happy paths, malformed hashlocks, insufficient balances, duplicate/double-spend attempts, claim-after-refund/refund-after-claim adversarial cases, registry resolution, and Hypothesis properties for conservation and exactly-one terminal state. API fit is good because it uses nest_core types, has SPDX/from __future__, registers in the built-in plugin registry, and remains compatible with pay(to, amount, ref), but it does not add a pyproject entry point and extends the pay signature with HTLC kwargs. Documentation is solid in code and docs/layers/payments.md with examples and YAML, though the PR body itself is only a one-line summary and there is no explicit runnable verification command. The idea is a standard crypto primitive, but applying it as a drop-in NEST payments layer with conservation/property tests and deterministic preimage helpers shows meaningful domain adaptation, and the ledger/HTLC/adversarial testing focus strongly matches the coinbase-crypto persona.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 8,
+      "handle": "linux-kernel",
+      "layer": "transport",
+      "title": "[Hackathon] linux-kernel: per-hop latency models for the in-memory transport",
+      "author": "mariagorskikh",
+      "head_sha": "275c2bd2effe0733ea7e026f9430bd0c971a87e7",
+      "head_ref": "hackathon/linux-kernel-latency-transport",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 4.0
+      },
+      "median": 23.0,
+      "consensus": "PR #8 from the linux-kernel persona scored 23.0/30 across 3 judges, with strongest dimensions correctness (4.0) and test_rigor (4.0). Judges flagged correctness (4.0) and test_rigor (4.0) as the weakest areas. Lead judge summary: \"The PR implements the claimed per-hop latency feature end-to-end: ScenarioConfig accepts transport_config, ScenarioRunner builds a latency model, Simulator passes it into InMemoryTransport, and send() schedules delivery at clock.\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 3,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 4
+          },
+          "rationale": "The implementation delivers the claimed per-hop latency feature: `InMemoryTransport.send` schedules delivery at `clock.now + delay`, `Simulator` accepts a `latency_model` with a dedicated RNG, and YAML `transport_config` is wired through `ScenarioRunner`. The latency model library handles the main distributions and many invalid parameters, though there are edge gaps such as negative `pair_matrix` delays not being rejected by the model itself and negative `jitter` in `make_latency_model` being silently ignored. Tests are broad, with unit tests for distributions, invalid inputs, determinism, simulator integration, and runner-level YAML behavior, but they are example/statistical tests rather than property-based or adversarial fuzzing. API fit is usable but not ideal: it adds a core `Simulator(latency_model=...)` hook and uses `AgentId`, but the scenario builder imports `nest_plugins_reference` directly instead of using a transport plugin registry/entry point and silently disables latency on `ImportError`. Documentation is strong in README and docstrings with examples despite the PR body being minimal, and the dedicated RNG/byte-identical trace concern makes the linux-kernel systems persona reasonably legible.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 3,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 4\n  },\n  \"rationale\": \"The implementation delivers the claimed per-hop latency feature: `InMemoryTransport.send` schedules delivery at `clock.now + delay`, `Simulator` accepts a `latency_model` with a dedicated RNG, and YAML `transport_config` is wired through `ScenarioRunner`. The latency model library handles the main distributions and many invalid parameters, though there are edge gaps such as negative `pair_matrix` delays not being rejected by the model itself and negative `jitter` in `make_latency_model` being silently ignored. Tests are broad, with unit tests for distributions, invalid inputs, determinism, simulator integration, and runner-level YAML behavior, but they are example/statistical tests rather than property-based or adversarial fuzzing. API fit is usable but not ideal: it adds a core `Simulator(latency_model=...)` hook and uses `AgentId`, but the scenario builder imports `nest_plugins_reference` directly instead of using a transport plugin registry/entry point and silently disables latency on `ImportError`. Documentation is strong in README and docstrings with examples despite the PR body being minimal, and the dedicated RNG/byte-identical trace concern makes the linux-kernel systems persona reasonably legible.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 4
+          },
+          "rationale": "The PR implements the claimed per-hop latency feature end-to-end: ScenarioConfig accepts transport_config, ScenarioRunner builds a latency model, Simulator passes it into InMemoryTransport, and send() schedules delivery at clock.now + delay while clamping negative outputs. The latency library covers constant, uniform, exponential, normal, pair_matrix, jitter, and zero models with useful validation, though some edges are imprecise, such as silently returning None if nest_plugins_reference cannot be imported and not rejecting negative pair-matrix entries except by transport-level clamping. Tests are extensive example/integration tests covering zero-latency backward compatibility, YAML wiring, deterministic stochastic traces, invalid parameters, distribution sanity, pair-matrix routing, and drop-rate compatibility, but they are not property-based and include a few weak/statistical tests. API fit is good for a platform improvement and uses core AgentId/callable types plus scenario YAML, but it is not registered as a formal transport plugin entry point and core now imports the reference plugin factory opportunistically. Documentation is strong in README and docstrings with Example blocks, but the PR body itself is only a one-line summary and lacks a verification command. The dedicated latency RNG, deterministic trace preservation, and heterogeneous topology matrix make this more than a textbook distribution wrapper and fit the linux-kernel/systems persona reasonably well.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":4},\"rationale\":\"The PR implements the claimed per-hop latency feature end-to-end: ScenarioConfig accepts transport_config, ScenarioRunner builds a latency model, Simulator passes it into InMemoryTransport, and send() schedules delivery at clock.now + delay while clamping negative outputs. The latency library covers constant, uniform, exponential, normal, pair_matrix, jitter, and zero models with useful validation, though some edges are imprecise, such as silently returning None if nest_plugins_reference cannot be imported and not rejecting negative pair-matrix entries except by transport-level clamping. Tests are extensive example/integration tests covering zero-latency backward compatibility, YAML wiring, deterministic stochastic traces, invalid parameters, distribution sanity, pair-matrix routing, and drop-rate compatibility, but they are not property-based and include a few weak/statistical tests. API fit is good for a platform improvement and uses core AgentId/callable types plus scenario YAML, but it is not registered as a formal transport plugin entry point and core now imports the reference plugin factory opportunistically. Documentation is strong in README and docstrings with Example blocks, but the PR body itself is only a one-line summary and lacks a verification command. The dedicated latency RNG, deterministic trace preservation, and heterogeneous topology matrix make this more than a textbook distribution wrapper and fit the linux-kernel/systems persona reasonably well.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 3,
+            "persona_fidelity": 4
+          },
+          "rationale": "The PR cleanly wires a LatencyModel through ScenarioConfig, ScenarioRunner, Simulator, and InMemoryTransport, preserving the zero-latency default and clamping delivery delay at the transport boundary; the reference models also validate many invalid parameters. There are some edge-case gaps: pair_matrix_latency does not reject negative per-pair delays when used directly, negative jitter in make_latency_model is silently ignored, and runner.py silently falls back to zero latency if the reference latency module cannot be imported despite a transport_config being present. Tests are substantial, with unit tests for each model, integration tests through Simulator, YAML-level runner tests, determinism checks, and drop-rate compatibility, but they are still example/statistical tests rather than property-based or adversarial fuzzing. API fit is good for a platform improvement: it uses nest_core AgentId types and a simple callable contract, but the scenario config is an untyped dict and core imports a reference-plugin module rather than resolving a registered transport plugin. Documentation is strong in README and function docstrings with Example blocks, though the PR body itself is minimal and there is no runnable command snippet. Novelty is mostly standard latency distributions, but the dedicated latency RNG and backward-compatibility/determinism concern make the linux-kernel systems persona fairly legible in the implementation.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 3,\n    \"persona_fidelity\": 4\n  },\n  \"rationale\": \"The PR cleanly wires a LatencyModel through ScenarioConfig, ScenarioRunner, Simulator, and InMemoryTransport, preserving the zero-latency default and clamping delivery delay at the transport boundary; the reference models also validate many invalid parameters. There are some edge-case gaps: pair_matrix_latency does not reject negative per-pair delays when used directly, negative jitter in make_latency_model is silently ignored, and runner.py silently falls back to zero latency if the reference latency module cannot be imported despite a transport_config being present. Tests are substantial, with unit tests for each model, integration tests through Simulator, YAML-level runner tests, determinism checks, and drop-rate compatibility, but they are still example/statistical tests rather than property-based or adversarial fuzzing. API fit is good for a platform improvement: it uses nest_core AgentId types and a simple callable contract, but the scenario config is an untyped dict and core imports a reference-plugin module rather than resolving a registered transport plugin. Documentation is strong in README and function docstrings with Example blocks, though the PR body itself is minimal and there is no runnable command snippet. Novelty is mostly standard latency distributions, but the dedicated latency RNG and backward-compatibility/determinism concern make the linux-kernel systems persona fairly legible in the implementation.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 9,
+      "handle": "cybersec-blackhat",
+      "layer": "auth",
+      "title": "[Hackathon] cybersec-blackhat: dpop_jwt auth plugin + security validators",
+      "author": "mariagorskikh",
+      "head_sha": "2e638bf89f8037d08f9d0f7dc2f3c46ff1598c84",
+      "head_ref": "hackathon/cybersec-blackhat-dpop-auth",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 3.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 5.0
+      },
+      "median": 24.0,
+      "consensus": "PR #9 from the cybersec-blackhat persona scored 24.0/30 across 3 judges, with strongest dimensions persona_fidelity (5.0) and test_rigor (4.0). Judges flagged correctness (3.0) and test_rigor (4.0) as the weakest areas. Lead judge summary: \"The PR implements a substantial DpopAuth plugin, wires it into the built-in auth registry as auth/dpop_jwt, and adds generic auth trace security validators for replay, audience confusion, impersonation, expired acceptance, and DPoP binding.\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 3,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR implements a substantial DpopAuth plugin, wires it into the built-in auth registry as auth/dpop_jwt, and adds generic auth trace security validators for replay, audience confusion, impersonation, expired acceptance, and DPoP binding. The main happy paths and many adversarial cases are covered, but there are security-correctness gaps: verify_for_audience records a token jti in the replay cache before DPoP proof validation, so a failed/missing proof can poison the token for later legitimate use, and the documented server nonce support is effectively unused because DpopProof has no nonce and verification never consumes issue_dpop_nonce values. Tests are extensive example-based adversarial vignettes, including alg:none, signature tampering, audience mismatch, replay, expiry, wrong DPoP key, malformed tokens, registry resolution, and validator behavior, but there is no property-based/fuzz testing and the replay-before-DPoP/nonce issues are missed. API fit is good for the bare Auth protocol and built-in registry, though the security-critical audience/DPoP behavior lives in a non-protocol verify_for_audience method, meaning drop-in users of Auth.verify would not get the advertised hardening. Documentation and code comments are unusually strong with examples and threat framing, but the PR body itself is only a one-line summary and no runnable scenario is included; the cybersec persona is very legible in the threat-model-oriented implementation and attack-focused tests.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 3,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The PR implements a substantial DpopAuth plugin, wires it into the built-in auth registry as auth/dpop_jwt, and adds generic auth trace security validators for replay, audience confusion, impersonation, expired acceptance, and DPoP binding. The main happy paths and many adversarial cases are covered, but there are security-correctness gaps: verify_for_audience records a token jti in the replay cache before DPoP proof validation, so a failed/missing proof can poison the token for later legitimate use, and the documented server nonce support is effectively unused because DpopProof has no nonce and verification never consumes issue_dpop_nonce values. Tests are extensive example-based adversarial vignettes, including alg:none, signature tampering, audience mismatch, replay, expiry, wrong DPoP key, malformed tokens, registry resolution, and validator behavior, but there is no property-based/fuzz testing and the replay-before-DPoP/nonce issues are missed. API fit is good for the bare Auth protocol and built-in registry, though the security-critical audience/DPoP behavior lives in a non-protocol verify_for_audience method, meaning drop-in users of Auth.verify would not get the advertised hardening. Documentation and code comments are unusually strong with examples and threat framing, but the PR body itself is only a one-line summary and no runnable scenario is included; the cybersec persona is very legible in the threat-model-oriented implementation and attack-focused tests.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 3,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR delivers a substantial DPoP-style JWT auth plugin, registers it as the built-in auth plugin `dpop_jwt`, and adds generic security validators for replay, audience confusion, impersonation, expired-token acceptance, and missing DPoP binding. Correctness is held back by security-relevant edge issues: `_verify_core` records a token `jti` in the replay cache before DPoP proof validation, so an invalid or missing proof can poison the cache and cause a later valid proof to fail, and the nonce API is documented as single-use but is not represented in `DpopProof` or enforced by verification. Tests are extensive and adversarial, covering alg-none, tampering, audience mismatch, replay, expiry, DPoP proof failures, revocation, malformed input, registry resolution, and validator behavior, but they are example-based only and miss the replay-cache poisoning/nonce gaps. API fit is good because the plugin uses `AgentId`, `Token`, `AuthContext`, satisfies the runtime `Auth` protocol, and is wired into `PluginRegistry`, though it is registered as a built-in rather than via a package entry point and the validators are not integrated into scenarios or trace emission. Documentation in code is unusually strong, with detailed module docs and `Example::` blocks, but the PR body itself is only a one-line summary. The cybersec-blackhat persona is very clear in the threat-oriented design, attack-named tests, and security validator module.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 3,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The PR delivers a substantial DPoP-style JWT auth plugin, registers it as the built-in auth plugin `dpop_jwt`, and adds generic security validators for replay, audience confusion, impersonation, expired-token acceptance, and missing DPoP binding. Correctness is held back by security-relevant edge issues: `_verify_core` records a token `jti` in the replay cache before DPoP proof validation, so an invalid or missing proof can poison the cache and cause a later valid proof to fail, and the nonce API is documented as single-use but is not represented in `DpopProof` or enforced by verification. Tests are extensive and adversarial, covering alg-none, tampering, audience mismatch, replay, expiry, DPoP proof failures, revocation, malformed input, registry resolution, and validator behavior, but they are example-based only and miss the replay-cache poisoning/nonce gaps. API fit is good because the plugin uses `AgentId`, `Token`, `AuthContext`, satisfies the runtime `Auth` protocol, and is wired into `PluginRegistry`, though it is registered as a built-in rather than via a package entry point and the validators are not integrated into scenarios or trace emission. Documentation in code is unusually strong, with detailed module docs and `Example::` blocks, but the PR body itself is only a one-line summary. The cybersec-blackhat persona is very clear in the threat-oriented design, attack-named tests, and security validator module.\"\n}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 3,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR delivers a substantial auth plugin with JWT-shaped tokens, audience checks, issuer/expiry handling, replay cache, DPoP-style proofs, revocation, and a registered built-in name in nest_core.plugins, but there are correctness gaps: verify_for_audience records a jti in the replay cache before validating the DPoP proof, so an attacker with a stolen bound token can poison the cache with a missing or bad proof and block the legitimate holder, and the issued DPoP nonce mechanism is not actually represented in DpopProof or enforced. Tests are extensive and adversarial, covering alg:none, signature tampering, audience confusion, replay, expiry, DPoP key/jti/audience mismatches, malformed input, registry resolution, and security validators, but they are example-based only and miss the replay-cache poisoning and nonce-enforcement issues. API fit is good because DpopAuth satisfies the Auth protocol, uses nest_core AgentId/AuthContext/Token, and is wired into the built-in registry, though it is not added via pyproject entry points and the strict audience/DPoP API is an extension beyond the bare protocol. Documentation in the code is unusually strong with threat-model-oriented module docs and Example blocks, but the PR body itself is only a one-line summary and no runnable scenario YAML is included. The combination of DPoP-style auth plus reusable security validators is more interesting than a textbook JWT wrapper, and the cybersec-blackhat persona is very legible in the attack-focused tests and validator design.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 3,\n    \"test_rigor\": 4,\n    \"api_fit\": 4,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The PR delivers a substantial auth plugin with JWT-shaped tokens, audience checks, issuer/expiry handling, replay cache, DPoP-style proofs, revocation, and a registered built-in name in nest_core.plugins, but there are correctness gaps: verify_for_audience records a jti in the replay cache before validating the DPoP proof, so an attacker with a stolen bound token can poison the cache with a missing or bad proof and block the legitimate holder, and the issued DPoP nonce mechanism is not actually represented in DpopProof or enforced. Tests are extensive and adversarial, covering alg:none, signature tampering, audience confusion, replay, expiry, DPoP key/jti/audience mismatches, malformed input, registry resolution, and security validators, but they are example-based only and miss the replay-cache poisoning and nonce-enforcement issues. API fit is good because DpopAuth satisfies the Auth protocol, uses nest_core AgentId/AuthContext/Token, and is wired into the built-in registry, though it is not added via pyproject entry points and the strict audience/DPoP API is an extension beyond the bare protocol. Documentation in the code is unusually strong with threat-model-oriented module docs and Example blocks, but the PR body itself is only a one-line summary and no runnable scenario YAML is included. The combination of DPoP-style auth plus reusable security validators is more interesting than a textbook JWT wrapper, and the cybersec-blackhat persona is very legible in the attack-focused tests and validator design.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 10,
+      "handle": "meta-backend",
+      "layer": "transport",
+      "title": "[Hackathon] meta-backend: realistic transport plugin (latency, jitter, queueing, loss)",
+      "author": "mariagorskikh",
+      "head_sha": "cb6c1dacb56d1adbcd4cc82761ceec8fbc00eb32",
+      "head_ref": "hackathon/meta-backend-realistic-transport",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 3.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 5.0
+      },
+      "median": 24.0,
+      "consensus": "PR #10 from the meta-backend persona scored 24.0/30 across 3 judges, with strongest dimensions persona_fidelity (5.0) and correctness (4.0). Judges flagged api_fit (3.0) and correctness (4.0) as the weakest areas. Lead judge summary: \"The PR implements a real NetworkModel seam, simulator wiring, built-in `transport: realistic` resolution, and a `RealisticNetwork` with validation, lognormal jitter, bandwidth serialization, per-sender egress queues, per-link overrides, ....\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR implements a real NetworkModel seam, simulator wiring, built-in `transport: realistic` resolution, and a `RealisticNetwork` with validation, lognormal jitter, bandwidth serialization, per-sender egress queues, per-link overrides, queue overflow drops, and loss; the main correctness caveat is that queue occupancy only resets when `busy_until <= t_now` and does not partially drain, so `max_queue_bytes` can over-drop under some timing patterns. Tests are extensive example/integration coverage across simulator hooks, runner wiring, deterministic traces, loss, validation, queueing, metrics, and standalone transport, but there are no property-based/fuzz tests and no check runs were reported. API fit is good for bundled usage via `_BUILTINS`, `LayerConfig.transport_config`, and ScenarioRunner wiring, though there is no pyproject entry point and the standalone `RealisticTransport` constructor/return types look less drop-in than the simulator `InMemoryTransport` path. Documentation is strong in code, README, and `scenarios/marketplace_realistic.yaml`, but the PR body itself is only a one-line summary. The transport realism, metrics-oriented scenario, deterministic RNG separation, and drop-reason attribution are clearly backend-systems flavored and make the `meta-backend` persona highly legible.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":5},\"rationale\":\"The PR implements a real NetworkModel seam, simulator wiring, built-in `transport: realistic` resolution, and a `RealisticNetwork` with validation, lognormal jitter, bandwidth serialization, per-sender egress queues, per-link overrides, queue overflow drops, and loss; the main correctness caveat is that queue occupancy only resets when `busy_until <= t_now` and does not partially drain, so `max_queue_bytes` can over-drop under some timing patterns. Tests are extensive example/integration coverage across simulator hooks, runner wiring, deterministic traces, loss, validation, queueing, metrics, and standalone transport, but there are no property-based/fuzz tests and no check runs were reported. API fit is good for bundled usage via `_BUILTINS`, `LayerConfig.transport_config`, and ScenarioRunner wiring, though there is no pyproject entry point and the standalone `RealisticTransport` constructor/return types look less drop-in than the simulator `InMemoryTransport` path. Documentation is strong in code, README, and `scenarios/marketplace_realistic.yaml`, but the PR body itself is only a one-line summary. The transport realism, metrics-oriented scenario, deterministic RNG separation, and drop-reason attribution are clearly backend-systems flavored and make the `meta-backend` persona highly legible.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 3,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR substantially implements the claimed realistic transport: `RealisticNetwork.schedule()` models base latency, lognormal jitter, bandwidth serialization, per-sender egress queueing, queue overflow, loss, and per-link overrides, and the simulator/runner are wired to use it for `layers.transport: realistic`. Correctness is not perfect because queue occupancy is only drained when the link is fully idle, so partial service while `t_now < busy_until` can overstate queued bytes, and per-link overrides are not validated for negative latency/bandwidth or invalid loss rates. Test coverage is strong and includes validation, deterministic scheduling, queueing, loss, runner integration, metrics, and trace drop reasons, but it is still example-based with no Hypothesis/property tests or fuzzing. API fit is usable through the built-in registry and scenario config, but it special-cases `transport == \"realistic\"` in `ScenarioRunner`, does not add a `pyproject.toml` entry point, and changes/introduces transport return shapes rather than cleanly matching an existing transport protocol. Documentation in code, README, and `scenarios/marketplace_realistic.yaml` is detailed with examples, though the PR body itself is only one sentence and there are no reported CI check runs. The backend persona is very legible in the emphasis on latency distributions, egress queues, load shedding, deterministic traces, throughput/latency metrics, and drop attribution.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":3,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":5},\"rationale\":\"The PR substantially implements the claimed realistic transport: `RealisticNetwork.schedule()` models base latency, lognormal jitter, bandwidth serialization, per-sender egress queueing, queue overflow, loss, and per-link overrides, and the simulator/runner are wired to use it for `layers.transport: realistic`. Correctness is not perfect because queue occupancy is only drained when the link is fully idle, so partial service while `t_now < busy_until` can overstate queued bytes, and per-link overrides are not validated for negative latency/bandwidth or invalid loss rates. Test coverage is strong and includes validation, deterministic scheduling, queueing, loss, runner integration, metrics, and trace drop reasons, but it is still example-based with no Hypothesis/property tests or fuzzing. API fit is usable through the built-in registry and scenario config, but it special-cases `transport == \\\"realistic\\\"` in `ScenarioRunner`, does not add a `pyproject.toml` entry point, and changes/introduces transport return shapes rather than cleanly matching an existing transport protocol. Documentation in code, README, and `scenarios/marketplace_realistic.yaml` is detailed with examples, though the PR body itself is only one sentence and there are no reported CI check runs. The backend persona is very legible in the emphasis on latency distributions, egress queues, load shedding, deterministic traces, throughput/latency metrics, and drop attribution.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 3,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR substantially delivers the claimed realistic transport behavior: `RealisticNetwork` models base latency, lognormal jitter, serialization delay, per-sender egress queueing, queue overflow, per-link overrides, and loss, and the simulator is wired to schedule delivery times through a `NetworkModel`. There are some correctness edge concerns, notably queue occupancy is only reset when the link is fully idle rather than drained proportionally over time, and per-link override values are not validated like global values, but the happy path and common stress cases look sound. Test coverage is strong and end-to-end, covering zero-latency compatibility, deterministic traces, loss reasons, scenario wiring, validation, queueing, and standalone transport behavior, though it is example-based rather than property-based. API fit is mixed: the built-in registry maps `transport.realistic`, but the runner special-cases `layers.transport == \"realistic\"` instead of generically consuming a plugin-provided network model, there is no pyproject entry point shown, and transport method return signatures drift from the prior in-memory API. Documentation in code and the new scenario YAML is unusually thorough, but the PR body itself is only a one-line summary with no verification instructions. The systems/backend persona is very legible in the design choices: deterministic RNG separation, queue/backpressure modeling, bandwidth serialization, throughput/latency metrics, and drop attribution are all backend-operational concerns.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 3,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The PR substantially delivers the claimed realistic transport behavior: `RealisticNetwork` models base latency, lognormal jitter, serialization delay, per-sender egress queueing, queue overflow, per-link overrides, and loss, and the simulator is wired to schedule delivery times through a `NetworkModel`. There are some correctness edge concerns, notably queue occupancy is only reset when the link is fully idle rather than drained proportionally over time, and per-link override values are not validated like global values, but the happy path and common stress cases look sound. Test coverage is strong and end-to-end, covering zero-latency compatibility, deterministic traces, loss reasons, scenario wiring, validation, queueing, and standalone transport behavior, though it is example-based rather than property-based. API fit is mixed: the built-in registry maps `transport.realistic`, but the runner special-cases `layers.transport == \\\"realistic\\\"` instead of generically consuming a plugin-provided network model, there is no pyproject entry point shown, and transport method return signatures drift from the prior in-memory API. Documentation in code and the new scenario YAML is unusually thorough, but the PR body itself is only a one-line summary with no verification instructions. The systems/backend persona is very legible in the design choices: deterministic RNG separation, queue/backpressure modeling, bandwidth serialization, throughput/latency metrics, and drop attribution are all backend-operational concerns.\"\n}",
+          "error": null
+        }
+      ]
+    },
+    {
+      "pr": 11,
+      "handle": "google-staff",
+      "layer": "transport",
+      "title": "[Hackathon] google-staff: netem transport + tail-latency metrics + SLO validators",
+      "author": "mariagorskikh",
+      "head_sha": "cae88400b6177277d5fe824fa9f0283b852402f6",
+      "head_ref": "hackathon/google-staff-netem-transport",
+      "model": "gpt-5.5",
+      "rubric_version": 1,
+      "diff_truncated": false,
+      "scores": {
+        "correctness": 4.0,
+        "test_rigor": 4.0,
+        "api_fit": 4.0,
+        "docs_quality": 4.0,
+        "novelty": 4.0,
+        "persona_fidelity": 5.0
+      },
+      "median": 25.0,
+      "consensus": "PR #11 from the google-staff persona scored 25.0/30 across 3 judges, with strongest dimensions persona_fidelity (5.0) and correctness (4.0). Judges flagged correctness (4.0) and test_rigor (4.0) as the weakest areas. Lead judge summary: \"The PR substantially implements the claimed netem-style transport path: ScenarioRunner builds a seeded DelayModel for layers.\"",
+      "judges": [
+        {
+          "judge_id": 0,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR substantially implements the claimed netem-style transport path: ScenarioRunner builds a seeded DelayModel for layers.transport == \"netem\", Simulator/InMemoryTransport schedule delayed deliveries and netem drops, metrics add p50/p95/p99/max latency, and validators add SLO checks. Edge cases such as empty latency samples, invalid probability ranges, negative jitter, drop_prob 0/1, and deterministic seeding are handled, though the FIFO/reordering implementation tracks only prior sampled delay per link rather than absolute send+arrival time, which can over-constrain or distort later messages after a high-tail sample. Tests are broad and include distribution checks, determinism, drop behavior, simulator/runner integration, plugin resolution, metrics, and SLO pass/fail cases, but they are example/statistical tests rather than property-based or adversarial fuzzing. API fit is good inside this repo via the built-in registry and ScenarioConfig additions, but there is no pyproject entry point and the registered transport class is a standalone wrapper while Tier 1 behavior is actually wired through InMemoryTransport plus delay_model. Documentation is strong in the example README and docstrings with Example blocks, although the PR body itself is only a short summary. The focus on tail latency, SLO validation, deterministic seed perturbation, and production-style percentiles is very legible as a google-staff/systems submission.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":5},\"rationale\":\"The PR substantially implements the claimed netem-style transport path: ScenarioRunner builds a seeded DelayModel for layers.transport == \\\"netem\\\", Simulator/InMemoryTransport schedule delayed deliveries and netem drops, metrics add p50/p95/p99/max latency, and validators add SLO checks. Edge cases such as empty latency samples, invalid probability ranges, negative jitter, drop_prob 0/1, and deterministic seeding are handled, though the FIFO/reordering implementation tracks only prior sampled delay per link rather than absolute send+arrival time, which can over-constrain or distort later messages after a high-tail sample. Tests are broad and include distribution checks, determinism, drop behavior, simulator/runner integration, plugin resolution, metrics, and SLO pass/fail cases, but they are example/statistical tests rather than property-based or adversarial fuzzing. API fit is good inside this repo via the built-in registry and ScenarioConfig additions, but there is no pyproject entry point and the registered transport class is a standalone wrapper while Tier 1 behavior is actually wired through InMemoryTransport plus delay_model. Documentation is strong in the example README and docstrings with Example blocks, although the PR body itself is only a short summary. The focus on tail latency, SLO validation, deterministic seed perturbation, and production-style percentiles is very legible as a google-staff/systems submission.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 1,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 4,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR substantially implements the claimed netem transport path: a DelayModel is wired through ScenarioRunner into Simulator/InMemoryTransport, latency percentiles are added to metrics, netem drops are traced, and SLO validation is exposed via validators and runner.validations. Correctness is not perfect: FIFO preservation tracks previous delay rather than previous absolute delivery time, which can artificially inflate delays for later sends on the same link, and the standalone transport advertises reliable/ordered capabilities even though the model can drop or reorder. Tests are strong example/integration coverage for distributions, determinism, drops, registry resolution, metrics, runner integration, and SLO pass/fail cases, but there are no property-based or fuzz tests. API fit is good with ScenarioConfig support and built-in plugin resolution, though it is not a clean entry-point-based plugin and the Tier 1 plugin behavior is special-cased in the runner rather than purely resolved through the transport protocol. Documentation is much stronger than the one-line PR body thanks to a runnable README, scenario YAML, and extensive Example docstrings, and the focus on tail latency, SLOs, deterministic seeding, and production-style validation strongly matches a google-staff systems persona.",
+          "raw_response": "{\"scores\":{\"correctness\":4,\"test_rigor\":4,\"api_fit\":4,\"docs_quality\":4,\"novelty\":4,\"persona_fidelity\":5},\"rationale\":\"The PR substantially implements the claimed netem transport path: a DelayModel is wired through ScenarioRunner into Simulator/InMemoryTransport, latency percentiles are added to metrics, netem drops are traced, and SLO validation is exposed via validators and runner.validations. Correctness is not perfect: FIFO preservation tracks previous delay rather than previous absolute delivery time, which can artificially inflate delays for later sends on the same link, and the standalone transport advertises reliable/ordered capabilities even though the model can drop or reorder. Tests are strong example/integration coverage for distributions, determinism, drops, registry resolution, metrics, runner integration, and SLO pass/fail cases, but there are no property-based or fuzz tests. API fit is good with ScenarioConfig support and built-in plugin resolution, though it is not a clean entry-point-based plugin and the Tier 1 plugin behavior is special-cased in the runner rather than purely resolved through the transport protocol. Documentation is much stronger than the one-line PR body thanks to a runnable README, scenario YAML, and extensive Example docstrings, and the focus on tail latency, SLOs, deterministic seeding, and production-style validation strongly matches a google-staff systems persona.\"}",
+          "error": null
+        },
+        {
+          "judge_id": 2,
+          "scores": {
+            "correctness": 4,
+            "test_rigor": 4,
+            "api_fit": 3,
+            "docs_quality": 4,
+            "novelty": 4,
+            "persona_fidelity": 5
+          },
+          "rationale": "The PR substantially delivers the claimed feature: `DelayModel` implements constant/uniform/lognormal latency, jitter, bandwidth delay, drops, deterministic seeding, and the simulator/runner wire it into `InMemoryTransport`, while metrics and validators add p50/p95/p99/max latency and SLO checks. There are some correctness caveats: FIFO preservation tracks only the previous sampled delay per link rather than absolute send/delivery time, which can distort long-running latency distributions after a high-tail sample, and the registered `netem` plugin is a standalone class with a non-drop-in constructor while Tier 1 behavior is actually special-cased in the runner. Test coverage is strong example-based coverage across delay distributions, deterministic runs, drops, metrics, SLO pass/fail, and registry resolution, but it lacks property-based tests or fuzz/adversarial malformed traces. API fit is usable for `layers.transport: netem`, but there is no pyproject entry point and the Protocol/drop-in story is only partial. Documentation is much better than the terse PR body, with a detailed README, runnable scenario YAML, and many `Example::` docstrings, and the SLO/tail-latency/determinism focus is very consistent with a google-staff systems persona.",
+          "raw_response": "{\n  \"scores\": {\n    \"correctness\": 4,\n    \"test_rigor\": 4,\n    \"api_fit\": 3,\n    \"docs_quality\": 4,\n    \"novelty\": 4,\n    \"persona_fidelity\": 5\n  },\n  \"rationale\": \"The PR substantially delivers the claimed feature: `DelayModel` implements constant/uniform/lognormal latency, jitter, bandwidth delay, drops, deterministic seeding, and the simulator/runner wire it into `InMemoryTransport`, while metrics and validators add p50/p95/p99/max latency and SLO checks. There are some correctness caveats: FIFO preservation tracks only the previous sampled delay per link rather than absolute send/delivery time, which can distort long-running latency distributions after a high-tail sample, and the registered `netem` plugin is a standalone class with a non-drop-in constructor while Tier 1 behavior is actually special-cased in the runner. Test coverage is strong example-based coverage across delay distributions, deterministic runs, drops, metrics, SLO pass/fail, and registry resolution, but it lacks property-based tests or fuzz/adversarial malformed traces. API fit is usable for `layers.transport: netem`, but there is no pyproject entry point and the Protocol/drop-in story is only partial. Documentation is much better than the terse PR body, with a detailed README, runnable scenario YAML, and many `Example::` docstrings, and the SLO/tail-latency/determinism focus is very consistent with a google-staff systems persona.\"\n}",
+          "error": null
+        }
+      ]
+    }
+  ]
+}

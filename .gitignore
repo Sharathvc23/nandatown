@@ -9,3 +9,9 @@ dist/
 build/
 uv.lock
 traces/
+
+# Research-harness outputs (per-cell JSONLs, aggregated dataset, plots).
+data/hackathon-runs/*.jsonl
+data/hackathon-runs/*.png
+# Per-agent isolated worktrees / clones.
+.harness-work/

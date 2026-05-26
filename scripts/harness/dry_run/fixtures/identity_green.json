@@ -1,0 +1,15 @@
+{
+  "exit_code": 0,
+  "pr_url": "https://github.com/mariagorskikh/nest/pull/9003",
+  "branch": "hackathon/identity-rotation",
+  "head_sha": "deadbeefcafef00d3333333333333333333333cc",
+  "layer_picked": "identity",
+  "lines_added": 174,
+  "lines_removed": 22,
+  "iterations_to_green": 1,
+  "claimed_ci_green": true,
+  "actual_ci_green_first_push": true,
+  "duration_seconds": 540.7,
+  "description": "Identity: add key-rotation primitive + tests",
+  "final_message": "Submitted. CI is green, ruff clean, see https://github.com/mariagorskikh/nest/pull/9003 (hackathon/identity-rotation)."
+}

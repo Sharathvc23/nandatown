@@ -22,6 +22,24 @@ dependencies = [
     "nest-scenarios",
     "nest-shell",
     "nest-plugins-reference",
+    "nest-marketplace",
+]
+
+[project.optional-dependencies]
+# Dependencies for the hackathon judge panel under scripts/judge/.
+# Install with: uv sync --extra judge
+# or install a single provider directly: uv pip install "anthropic>=0.30"
+# / "openai>=1.0". The judge_pr module imports providers lazily, so a
+# missing SDK only fails at the point a live judge is invoked.
+judge = [
+    "anthropic>=0.30",
+    "openai>=1.0",
+]
+# Optional extras: the `harness` extra adds plotting deps for analyze.py.
+# Keeping it optional means the core repo (and CI) stays matplotlib-free.
+harness = [
+    "matplotlib>=3.8",
+    "PyYAML>=6.0",
 ]
 
 [project.urls]
@@ -37,6 +55,7 @@ members = [
     "packages/nest-scenarios",
     "packages/nest-shell",
     "packages/nest-plugins-reference",
+    "packages/nest-marketplace",
 ]
 
 [tool.uv]
@@ -61,6 +80,7 @@ nest-mocks = { workspace = true }
 nest-scenarios = { workspace = true }
 nest-shell = { workspace = true }
 nest-plugins-reference = { workspace = true }
+nest-marketplace = { workspace = true }
 
 [tool.ruff]
 target-version = "py312"
@@ -83,9 +103,15 @@ extraPaths = [
     "packages/nest-scenarios",
     "packages/nest-shell",
     "packages/nest-plugins-reference",
+    "packages/nest-marketplace",
+    ".",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["packages"]
-addopts = ["--import-mode=importlib"]
+testpaths = ["packages", "scripts"]
+addopts = ["--import-mode=importlib", "-m", "not live"]
+pythonpath = ["."]
+markers = [
+    "live: end-to-end tests that hit live external services (skipped by default)",
+]
