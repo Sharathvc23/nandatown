@@ -2,15 +2,17 @@
 """CLI that scores every open ``hackathon/*`` PR and writes ``scores.json``.
 
 The output is idempotent: re-running only re-scores PRs whose HEAD SHA has
-changed. If ``ANTHROPIC_API_KEY`` is unset, the CLI falls back to a
-:class:`MockJudgeClient` so the schema is exercised end-to-end without
+changed. When the selected provider's API key is unset, the CLI falls back
+to a :class:`MockJudgeClient` so the schema is exercised end-to-end without
 spending budget; this is intended for CI smoke and for first-bootstrap.
 
 Usage::
 
     uv run python -m scripts.judge.run_all --output docs/hackathon/scores.json
-    uv run python -m scripts.judge.run_all --mock         # force mock judges
-    uv run python -m scripts.judge.run_all --pr 2 --pr 3  # subset
+    uv run python -m scripts.judge.run_all --mock                  # force mock judges
+    uv run python -m scripts.judge.run_all --pr 2 --pr 3           # subset
+    uv run python -m scripts.judge.run_all --provider openai       # use OpenAI
+    uv run python -m scripts.judge.run_all --provider openai --model gpt-5.5
 
 Example::
 
@@ -35,11 +37,18 @@ from scripts.judge.judge_pr import (
     GITHUB_API,
     PRContext,
     _gh_get,  # pyright: ignore[reportPrivateUsage]
+    default_model_for,
     fetch_pr_context,
     infer_layer,
     infer_persona,
     judge_pr,
 )
+
+# Map provider name to the env var that holds its API key.
+_PROVIDER_ENV: dict[str, str] = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+}
 
 SCOREBOARD_VERSION = 1
 
@@ -214,6 +223,7 @@ async def _score_one(
     model: str,
     use_mock: bool,
     cache_entry: dict[str, Any] | None = None,
+    provider: str = "anthropic",
 ) -> dict[str, Any]:
     """Fetch PR context and run the judges, returning the submission dict.
 
@@ -264,6 +274,7 @@ async def _score_one(
             owner=owner,
             repo=repo,
             ctx=ctx,
+            provider=provider,
         )
     return _build_submission(ctx=ctx, result_dict=result.to_dict())
 
@@ -279,7 +290,23 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Path to write the scoreboard JSON.",
     )
     parser.add_argument("--n-judges", type=int, default=3)
-    parser.add_argument("--model", default="claude-opus-4-7")
+    parser.add_argument(
+        "--provider",
+        choices=("anthropic", "openai"),
+        default="anthropic",
+        help=(
+            "LLM provider for live judges. Defaults to 'anthropic' "
+            "(uses ANTHROPIC_API_KEY); 'openai' uses OPENAI_API_KEY."
+        ),
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help=(
+            "Override the model name. Defaults to the provider's recommended "
+            "model: 'claude-opus-4-7' for anthropic, 'gpt-5.5' for openai."
+        ),
+    )
     parser.add_argument(
         "--pr",
         type=int,
@@ -290,7 +317,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--mock",
         action="store_true",
-        help="Force the mock judge (also auto-enabled if ANTHROPIC_API_KEY is unset).",
+        help=(
+            "Force the mock judge (also auto-enabled if the selected "
+            "provider's API key env var is unset)."
+        ),
     )
     parser.add_argument(
         "--force",
@@ -311,10 +341,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 async def _main_async(args: argparse.Namespace) -> int:
-    use_mock = bool(args.mock or not os.environ.get("ANTHROPIC_API_KEY"))
+    provider = str(args.provider)
+    env_var = _PROVIDER_ENV[provider]
+    has_key = bool(os.environ.get(env_var))
+    # Resolve the model: if the caller didn't pass one, use the provider's
+    # recommended default. Anthropic's default is preserved as
+    # 'claude-opus-4-7' so the default-provider path is bit-for-bit
+    # identical to the pre-OpenAI behavior.
+    model = str(args.model) if args.model else default_model_for(provider)
+    use_mock = bool(args.mock or not has_key)
     if use_mock and not args.mock:
         print(
-            "ANTHROPIC_API_KEY not set; using deterministic mock judges. "
+            f"{env_var} not set; using deterministic mock judges. "
             "Output will be marked accordingly.",
             file=sys.stderr,
         )
@@ -363,9 +401,10 @@ async def _main_async(args: argparse.Namespace) -> int:
                 owner=args.owner,
                 repo=args.repo,
                 n_judges=args.n_judges,
-                model=args.model,
+                model=model,
                 use_mock=use_mock,
                 cache_entry=cache_by_pr.get(pr_number),
+                provider=provider,
             )
             if sub.get("diff_truncated"):
                 print(

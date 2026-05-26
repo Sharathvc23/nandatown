@@ -20,15 +20,21 @@ from typing import Any
 import pytest
 
 from scripts.judge.judge_pr import (
+    DEFAULT_ANTHROPIC_MODEL,
+    DEFAULT_OPENAI_MODEL,
     DIMENSIONS,
     RUBRIC_VERSION,
+    AnthropicProvider,
     JudgeResult,
     JudgeVerdict,
+    OpenAIProvider,
     PRContext,
     aggregate,
+    default_model_for,
     infer_layer,
     infer_persona,
     judge_pr,
+    make_provider,
     median_score,
     parse_verdict,
     truncate_diff,
@@ -372,6 +378,175 @@ class TestJudgePrEndToEnd:
             assert result.medians[dim] == 4.0
         assert any(j.error is not None for j in result.judges)
         assert any(j.error is None for j in result.judges)
+
+
+# --------------------------------------------------------------------------- #
+# Provider factory + OpenAI provider (mocked)
+# --------------------------------------------------------------------------- #
+
+
+class TestMakeProvider:
+    def test_anthropic_returns_anthropic_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+        provider = make_provider("anthropic")
+        assert isinstance(provider, AnthropicProvider)
+
+    def test_openai_returns_openai_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        provider = make_provider("openai")
+        assert isinstance(provider, OpenAIProvider)
+
+    def test_openai_uppercase_case_insensitive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        provider = make_provider("OpenAI")
+        assert isinstance(provider, OpenAIProvider)
+
+    def test_unknown_provider_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown judge provider"):
+            make_provider("palm")
+
+    def test_openai_missing_key_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+            make_provider("openai")
+
+    def test_anthropic_missing_key_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
+            make_provider("anthropic")
+
+    def test_default_model_for(self) -> None:
+        assert default_model_for("anthropic") == DEFAULT_ANTHROPIC_MODEL
+        assert default_model_for("openai") == DEFAULT_OPENAI_MODEL
+        with pytest.raises(ValueError, match="Unknown judge provider"):
+            default_model_for("nope")
+
+
+class _FakeOpenAIMessage:
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+
+class _FakeOpenAIChoice:
+    def __init__(self, content: str) -> None:
+        self.message = _FakeOpenAIMessage(content)
+
+
+class _FakeOpenAIResponse:
+    def __init__(self, content: str) -> None:
+        self.choices = [_FakeOpenAIChoice(content)]
+
+
+class _FakeOpenAICompletions:
+    """Records the create() kwargs so tests can assert on them."""
+
+    def __init__(self, content: str) -> None:
+        self._content = content
+        self.calls: list[dict[str, Any]] = []
+
+    async def create(self, **kwargs: Any) -> _FakeOpenAIResponse:
+        self.calls.append(kwargs)
+        return _FakeOpenAIResponse(self._content)
+
+
+class _FakeOpenAIChat:
+    def __init__(self, content: str) -> None:
+        self.completions = _FakeOpenAICompletions(content)
+
+
+class _FakeOpenAIClient:
+    def __init__(self, content: str) -> None:
+        self.chat = _FakeOpenAIChat(content)
+
+
+class TestOpenAIProvider:
+    def test_openai_provider_judge_uses_chat_completions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        provider = OpenAIProvider(model="gpt-5.5")
+        fake = _FakeOpenAIClient(
+            json.dumps(
+                {
+                    "scores": dict.fromkeys(DIMENSIONS, 4),
+                    "rationale": "ok.",
+                }
+            )
+        )
+        # Inject the fake SDK client directly to bypass network init.
+        provider._client = fake  # pyright: ignore[reportPrivateUsage]
+        raw = asyncio.run(
+            provider.judge(
+                system_blocks=[{"type": "text", "text": "RUBRIC"}],
+                user="user content",
+            )
+        )
+        parsed = json.loads(raw)
+        assert parsed["scores"]["correctness"] == 4
+        # Confirm the kwargs we care about made it to the SDK.
+        assert len(fake.chat.completions.calls) == 1
+        call = fake.chat.completions.calls[0]
+        assert call["model"] == "gpt-5.5"
+        assert call["temperature"] == 0.0
+        assert call["response_format"] == {"type": "json_object"}
+        # System message is flattened from blocks; user message is verbatim.
+        msgs = call["messages"]
+        assert msgs[0]["role"] == "system"
+        assert "RUBRIC" in msgs[0]["content"]
+        assert msgs[1] == {"role": "user", "content": "user content"}
+
+    def test_openai_provider_flatten_multi_block_system(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        provider = OpenAIProvider(model="gpt-5.5")
+        fake = _FakeOpenAIClient("{}")
+        provider._client = fake  # pyright: ignore[reportPrivateUsage]
+        asyncio.run(
+            provider.judge(
+                system_blocks=[
+                    {"type": "text", "text": "BLOCK ONE"},
+                    {"type": "text", "text": "BLOCK TWO"},
+                ],
+                user="u",
+            )
+        )
+        system_msg = fake.chat.completions.calls[0]["messages"][0]["content"]
+        assert "BLOCK ONE" in system_msg
+        assert "BLOCK TWO" in system_msg
+
+    def test_openai_provider_end_to_end_via_judge_pr(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`judge_pr(..., client=OpenAIProvider(...))` aggregates correctly."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        provider = OpenAIProvider(model="gpt-5.5")
+        fake = _FakeOpenAIClient(
+            json.dumps(
+                {
+                    "scores": dict.fromkeys(DIMENSIONS, 5),
+                    "rationale": "Stellar.",
+                }
+            )
+        )
+        provider._client = fake  # pyright: ignore[reportPrivateUsage]
+        ctx = _ctx(number=99, head_ref="hackathon/openai-llm-foo")
+        result = asyncio.run(
+            judge_pr(
+                99,
+                n_judges=2,
+                model="gpt-5.5",
+                client=provider,
+                ctx=ctx,
+            )
+        )
+        # The Anthropic-shape JSON schema is preserved end-to-end.
+        assert isinstance(result, JudgeResult)
+        assert result.pr_number == 99
+        for dim in DIMENSIONS:
+            assert result.medians[dim] == 5.0
+        assert result.total_median == 30.0
+        as_dict = result.to_dict()
+        assert as_dict["model"] == "gpt-5.5"
+        assert as_dict["rubric_version"] == RUBRIC_VERSION
 
 
 # --------------------------------------------------------------------------- #

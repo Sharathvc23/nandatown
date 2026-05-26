@@ -24,6 +24,17 @@ dependencies = [
     "nest-plugins-reference",
 ]
 
+[project.optional-dependencies]
+# Dependencies for the hackathon judge panel under scripts/judge/.
+# Install with: uv sync --extra judge
+# or install a single provider directly: uv pip install "anthropic>=0.30"
+# / "openai>=1.0". The judge_pr module imports providers lazily, so a
+# missing SDK only fails at the point a live judge is invoked.
+judge = [
+    "anthropic>=0.30",
+    "openai>=1.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/mariagorskikh/nest"
 Repository = "https://github.com/mariagorskikh/nest"

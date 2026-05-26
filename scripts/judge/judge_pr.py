@@ -399,8 +399,15 @@ def infer_layer(title: str, body: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# Judge call (Anthropic, lazy import)
+# Judge call (Anthropic / OpenAI providers, lazy imports)
 # --------------------------------------------------------------------------- #
+
+
+# Default model per provider.
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-7"
+# As of May 2026, OpenAI's current best reasoning model on chat.completions is
+# gpt-5.5. Callers can override with --model on the CLI.
+DEFAULT_OPENAI_MODEL = "gpt-5.5"
 
 
 class _JudgeClient(Protocol):
@@ -500,6 +507,131 @@ class AnthropicJudgeClient:
             if isinstance(text, str):
                 parts.append(text)
         return "".join(parts)
+
+
+# Public alias matching the Provider naming used in newer callers / docs.
+# The original ``AnthropicJudgeClient`` name is retained for back-compat.
+AnthropicProvider = AnthropicJudgeClient
+
+
+class OpenAIProvider:
+    """Thin wrapper over ``openai.AsyncOpenAI`` chat.completions.
+
+    The rubric is flattened from the Anthropic-style ``system_blocks`` list
+    into a single ``system`` message — OpenAI's chat.completions endpoint
+    handles caching implicitly per its docs, so we don't try to be clever
+    with any explicit cache marker. JSON mode is requested via
+    ``response_format={"type": "json_object"}`` to match the rubric's
+    ``Return JSON only.`` contract.
+
+    Example::
+
+        provider = OpenAIProvider(model="gpt-5.5")
+        response = await provider.judge(system_blocks=[...], user="...")
+    """
+
+    def __init__(self, *, model: str, api_key: str | None = None) -> None:
+        self._model = model
+        self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        if not self._api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY is not set. Export it before calling judge_pr() "
+                "with provider='openai', or pass api_key= explicitly. The judge "
+                "will not run without it."
+            )
+        self._client: Any | None = None
+
+    def _get_client(self) -> Any:
+        if self._client is None:
+            try:
+                import openai  # pyright: ignore[reportMissingImports]
+            except ImportError as exc:  # pragma: no cover - env-dependent
+                raise RuntimeError(
+                    "The 'openai' package is not installed. Install it with: uv pip install openai"
+                ) from exc
+            self._client = cast(
+                "Any",
+                openai.AsyncOpenAI(api_key=self._api_key),  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            )
+        return cast("Any", self._client)
+
+    @staticmethod
+    def _flatten_system(system_blocks: list[dict[str, Any]]) -> str:
+        """Concatenate Anthropic-style system blocks into a single string.
+
+        The judge_pr module hands every provider the same shape: a list of
+        ``{"type": "text", "text": "...", ...}`` blocks. OpenAI doesn't
+        accept that array form, so we join the ``text`` fields with blank
+        lines — semantically equivalent for the rubric prompt.
+        """
+        parts: list[str] = []
+        for block in system_blocks:
+            text = block.get("text")
+            if isinstance(text, str):
+                parts.append(text)
+        return "\n\n".join(parts)
+
+    async def judge(self, *, system_blocks: list[dict[str, Any]], user: str) -> str:
+        client = self._get_client()
+        system_text = self._flatten_system(system_blocks)
+        response: Any = await client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": system_text},
+                {"role": "user", "content": user},
+            ],
+            temperature=0.0,
+            response_format={"type": "json_object"},
+        )
+        choices = cast("list[Any]", getattr(response, "choices", []))
+        if not choices:
+            return ""
+        message = getattr(choices[0], "message", None)
+        content = getattr(message, "content", None) if message is not None else None
+        return content if isinstance(content, str) else ""
+
+
+def make_provider(
+    name: str,
+    *,
+    model: str | None = None,
+    api_key: str | None = None,
+) -> _JudgeClient:
+    """Build a judge client for the given provider name.
+
+    Defaults to the provider's recommended model when ``model`` is None
+    (``claude-opus-4-7`` for anthropic, ``gpt-5.5`` for openai).
+
+    Example::
+
+        provider = make_provider("openai")
+        provider = make_provider("anthropic", model="claude-opus-4-7")
+    """
+    key = name.lower().strip()
+    if key == "anthropic":
+        return AnthropicProvider(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=api_key)
+    if key == "openai":
+        return OpenAIProvider(model=model or DEFAULT_OPENAI_MODEL, api_key=api_key)
+    raise ValueError(
+        f"Unknown judge provider {name!r}; supported providers are 'anthropic' and 'openai'."
+    )
+
+
+def default_model_for(provider: str) -> str:
+    """Return the default model name for a provider.
+
+    Example::
+
+        default_model_for("openai") == "gpt-5.5"
+    """
+    key = provider.lower().strip()
+    if key == "anthropic":
+        return DEFAULT_ANTHROPIC_MODEL
+    if key == "openai":
+        return DEFAULT_OPENAI_MODEL
+    raise ValueError(
+        f"Unknown judge provider {provider!r}; supported providers are 'anthropic' and 'openai'."
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -615,17 +747,21 @@ async def judge_pr(
     repo: str = "nest",
     client: _JudgeClient | None = None,
     ctx: PRContext | None = None,
+    provider: str = "anthropic",
 ) -> JudgeResult:
     """Run N parallel judges on a PR and return the aggregated result.
 
-    The Anthropic client is created lazily on first use. If ``ctx`` is
+    The provider client is created lazily on first use. If ``ctx`` is
     provided, it is used directly; otherwise the PR is fetched from GitHub.
-    If ``client`` is provided, it is used in place of the Anthropic
-    client (this is what tests use to inject a mock judge).
+    If ``client`` is provided, it is used in place of the live provider
+    client (this is what tests use to inject a mock judge). When ``client``
+    is None, the provider is chosen by ``provider`` ("anthropic" or
+    "openai") and the ``model`` is passed through.
 
     Example::
 
         result = await judge_pr(2, n_judges=3)
+        result = await judge_pr(2, n_judges=3, provider="openai", model="gpt-5.5")
     """
     if n_judges < 1:
         raise ValueError(f"n_judges must be >= 1, got {n_judges}")
@@ -634,7 +770,9 @@ async def judge_pr(
     rubric = load_rubric()
     system_blocks = _system_blocks(rubric)
     user_prompt = _build_user_prompt(ctx)
-    judge_client: _JudgeClient = client if client is not None else AnthropicJudgeClient(model=model)
+    judge_client: _JudgeClient = (
+        client if client is not None else make_provider(provider, model=model)
+    )
 
     async def run_one(judge_id: int) -> JudgeVerdict:
         try:
