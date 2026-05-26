@@ -191,7 +191,7 @@ def aggregate(
             "underlying issue is resolved."
         )
     else:
-        consensus = _build_consensus(good, ctx, persona)
+        consensus = _build_consensus(good, ctx, persona, total_median=total_median)
     return JudgeResult(
         pr_number=ctx.number,
         head_sha=ctx.head_sha,
@@ -208,15 +208,26 @@ def aggregate(
     )
 
 
-def _build_consensus(verdicts: list[JudgeVerdict], ctx: PRContext, persona: str) -> str:
+def _build_consensus(
+    verdicts: list[JudgeVerdict],
+    ctx: PRContext,
+    persona: str,
+    *,
+    total_median: float,
+) -> str:
     """Three-sentence consensus narrative stitched from per-dimension medians.
 
     Deliberately deterministic: derived from the numeric verdicts so the
-    consensus is reproducible without a second LLM call.
+    consensus is reproducible without a second LLM call. The reported total
+    (``total_median``) is taken verbatim from the aggregator so the prose
+    always agrees with the ``median`` field that ends up in ``scores.json``;
+    historically this was recomputed as ``sum(per-dim medians)`` which
+    diverges from ``median_low(per-judge totals)`` in any non-degenerate
+    case (see PR #14 schema-drift fix).
 
     Example::
 
-        _build_consensus(verdicts, ctx, "harvard-phd")
+        _build_consensus(verdicts, ctx, "harvard-phd", total_median=21.0)
     """
     medians = {dim: median_score([v.scores.get(dim, 0) for v in verdicts]) for dim in DIMENSIONS}
     strong = sorted(medians.items(), key=lambda kv: -kv[1])[:2]
@@ -224,7 +235,7 @@ def _build_consensus(verdicts: list[JudgeVerdict], ctx: PRContext, persona: str)
     persona_clause = f" from the {persona} persona" if persona else ""
     s1 = (
         f"PR #{ctx.number}{persona_clause} scored "
-        f"{sum(medians.values()):.1f}/30 across {len(verdicts)} judges, "
+        f"{total_median:.1f}/30 across {len(verdicts)} judges, "
         f"with strongest dimensions {strong[0][0]} ({strong[0][1]:.1f}) "
         f"and {strong[1][0]} ({strong[1][1]:.1f})."
     )

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T20:05:48+00:00",
+  "generated_at": "2026-05-26T20:49:08+00:00",
   "mock": true,
   "submissions": [
     {
@@ -23,7 +23,7 @@
         "persona_fidelity": 4.0
       },
       "median": 21.0,
-      "consensus": "PR #2 from the harvard-phd persona scored 20.0/30 across 3 judges, with strongest dimensions docs_quality (5.0) and persona_fidelity (4.0). Judges flagged test_rigor (2.0) and correctness (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
+      "consensus": "PR #2 from the harvard-phd persona scored 21.0/30 across 3 judges, with strongest dimensions docs_quality (5.0) and persona_fidelity (4.0). Judges flagged test_rigor (2.0) and correctness (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
       "judges": [
         {
           "judge_id": 0,
@@ -155,7 +155,7 @@
         "persona_fidelity": 3.0
       },
       "median": 22.0,
-      "consensus": "PR #4 from the openai-llm persona scored 21.0/30 across 3 judges, with strongest dimensions correctness (4.0) and api_fit (4.0). Judges flagged test_rigor (3.0) and novelty (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
+      "consensus": "PR #4 from the openai-llm persona scored 22.0/30 across 3 judges, with strongest dimensions correctness (4.0) and api_fit (4.0). Judges flagged test_rigor (3.0) and novelty (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
       "judges": [
         {
           "judge_id": 0,
@@ -221,7 +221,7 @@
         "persona_fidelity": 4.0
       },
       "median": 22.0,
-      "consensus": "PR #5 from the cmu-robotics persona scored 24.0/30 across 3 judges, with strongest dimensions test_rigor (5.0) and docs_quality (5.0). Judges flagged correctness (3.0) and api_fit (3.0) as the weakest areas. Lead judge summary: \"Mock judge 1: deterministic synthetic score.\"",
+      "consensus": "PR #5 from the cmu-robotics persona scored 22.0/30 across 3 judges, with strongest dimensions test_rigor (5.0) and docs_quality (5.0). Judges flagged correctness (3.0) and api_fit (3.0) as the weakest areas. Lead judge summary: \"Mock judge 1: deterministic synthetic score.\"",
       "judges": [
         {
           "judge_id": 0,
@@ -485,7 +485,7 @@
         "persona_fidelity": 4.0
       },
       "median": 20.0,
-      "consensus": "PR #9 from the cybersec-blackhat persona scored 21.0/30 across 3 judges, with strongest dimensions test_rigor (4.0) and api_fit (4.0). Judges flagged correctness (3.0) and docs_quality (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
+      "consensus": "PR #9 from the cybersec-blackhat persona scored 20.0/30 across 3 judges, with strongest dimensions test_rigor (4.0) and api_fit (4.0). Judges flagged correctness (3.0) and docs_quality (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
       "judges": [
         {
           "judge_id": 0,
@@ -551,7 +551,7 @@
         "persona_fidelity": 5.0
       },
       "median": 19.0,
-      "consensus": "PR #10 from the meta-backend persona scored 21.0/30 across 3 judges, with strongest dimensions persona_fidelity (5.0) and docs_quality (4.0). Judges flagged correctness (3.0) and test_rigor (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
+      "consensus": "PR #10 from the meta-backend persona scored 19.0/30 across 3 judges, with strongest dimensions persona_fidelity (5.0) and docs_quality (4.0). Judges flagged correctness (3.0) and test_rigor (3.0) as the weakest areas. Lead judge summary: \"Mock judge 0: deterministic synthetic score.\"",
       "judges": [
         {
           "judge_id": 0,
@@ -617,7 +617,7 @@
         "persona_fidelity": 3.0
       },
       "median": 19.0,
-      "consensus": "PR #11 from the google-staff persona scored 20.0/30 across 3 judges, with strongest dimensions test_rigor (5.0) and api_fit (5.0). Judges flagged correctness (2.0) and novelty (2.0) as the weakest areas. Lead judge summary: \"Mock judge 1: deterministic synthetic score.\"",
+      "consensus": "PR #11 from the google-staff persona scored 19.0/30 across 3 judges, with strongest dimensions test_rigor (5.0) and api_fit (5.0). Judges flagged correctness (2.0) and novelty (2.0) as the weakest areas. Lead judge summary: \"Mock judge 1: deterministic synthetic score.\"",
       "judges": [
         {
           "judge_id": 0,

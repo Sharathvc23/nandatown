@@ -142,6 +142,57 @@ class TestAggregate:
         assert math.isnan(result.total_median)
         assert "No judges" in result.consensus
 
+    def test_consensus_uses_total_median_not_sum_of_medians(self) -> None:
+        # Three judges with divergent dimension totals; per-dim medians
+        # come from one set, per-judge totals from another. The bug being
+        # guarded against: _build_consensus used to report
+        # sum(per-dim medians), which differs from median_low(per-judge totals)
+        # whenever the medians don't line up on the same judge.
+        v0 = JudgeVerdict(
+            judge_id=0,
+            scores={
+                "correctness": 5,
+                "test_rigor": 3,
+                "api_fit": 4,
+                "docs_quality": 5,
+                "novelty": 3,
+                "persona_fidelity": 5,
+            },
+            rationale="strong overall.",
+        )
+        v1 = JudgeVerdict(
+            judge_id=1,
+            scores={
+                "correctness": 2,
+                "test_rigor": 2,
+                "api_fit": 2,
+                "docs_quality": 5,
+                "novelty": 2,
+                "persona_fidelity": 4,
+            },
+            rationale="weak.",
+        )
+        v2 = JudgeVerdict(
+            judge_id=2,
+            scores={
+                "correctness": 3,
+                "test_rigor": 2,
+                "api_fit": 3,
+                "docs_quality": 5,
+                "novelty": 4,
+                "persona_fidelity": 4,
+            },
+            rationale="middle.",
+        )
+        result = aggregate([v0, v1, v2], _ctx(number=2), model="m", persona="harvard-phd")
+        # Per-dim medians sum: 3+2+3+5+3+4 = 20. Per-judge totals: 25, 17, 21
+        # -> median_low = 21. The two differ. The prose must agree with
+        # the JSON `median` field (total_median), not the buggy sum.
+        assert result.total_median == 21.0
+        assert f"{result.total_median:.1f}/30" in result.consensus
+        assert "21.0/30" in result.consensus
+        assert "20.0/30" not in result.consensus
+
 
 # --------------------------------------------------------------------------- #
 # parse_verdict
