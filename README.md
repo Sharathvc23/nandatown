@@ -48,6 +48,7 @@ That's the whole "hello world". No clone, no path, no setup.
 - [Fidelity tiers](#fidelity-tiers)
 - [Determinism &amp; what the clock does](#determinism--what-the-clock-does)
 - [Limitations](#limitations)
+- [Scoreboard](#scoreboard)
 - [Contributing](#contributing)
 - [Citation](#citation)
 - [License](#license)
@@ -59,6 +60,9 @@ That's the whole "hello world". No clone, no path, no setup.
 NEST is hosting a month-long open hackathon. Pick one undersolved
 problem from the 12-layer stack, ship a plugin or scenario or
 validator that fixes it, prove it works under adversarial conditions.
+Every submission is scored by an automated judge panel along six
+dimensions (correctness, test rigor, API fit, docs, novelty, persona
+fidelity), each on a 1-5 scale.
 
 - [Charter](docs/hackathon/charter.md) — the participant brief: what
   to build, the rules, branch naming.
@@ -68,7 +72,9 @@ validator that fixes it, prove it works under adversarial conditions.
 - [Judging](docs/hackathon/judging.md) — the six-dimension rubric
   and how the scoreboard works.
 
-If this is your first time here, read the charter first.
+If this is your first time here, read the charter first. Scoreboard
+details and judge-panel internals are in the
+[Scoreboard](#scoreboard) section below.
 
 ---
 
@@ -341,15 +347,7 @@ Two things to know that aren't obvious:
 
 ---
 
-## Hackathon
-
-NEST runs a month-long hackathon where engineers (and agents) submit
-plugins, scenarios, and platform improvements as PRs against a
-`hackathon/*` branch. Every submission is scored by an automated judge
-panel along six dimensions (correctness, test rigor, API fit, docs,
-novelty, persona fidelity), each on a 1-5 scale.
-
-### Scoreboard
+## Scoreboard
 
 > Live scoreboard: [`docs/hackathon/scores.json`](docs/hackathon/scores.json) — machine-readable scores for every open hackathon PR. A marketplace UI on top of this file is coming.
 
