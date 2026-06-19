@@ -186,6 +186,38 @@ class TestContinuity:
         rec.continuity_signature = b"\x00" * 64
         assert not ident.verify_continuity(AgentId("a1"), rec)
 
+    def test_retired_key_cannot_authorise_new_successor(self) -> None:
+        """A key retired by an *earlier* rotation cannot mint a fresh successor.
+
+        Models a compromised stale key: even with a cryptographically valid
+        continuity signature, a peer must not extend the identity chain from a
+        key that was already rotated out, or the whole point of rotation is lost.
+        """
+        from nest_plugins_reference.identity.ed25519_rotating import RotationRecord
+
+        signer = _ident("signer")
+        stale_key_id = signer.current_key_id
+        signer.set_clock(5.0)
+        signer.rotate_key(b"legit-new")  # key0 retired at tick 5, key1 is tip
+
+        # Attacker holds the now-retired key0 and forges a continuity record
+        # using a real signature by that stale key (via the public sign_with).
+        evil_rec = RotationRecord(
+            agent_id=AgentId("signer"),
+            old_key_id=stale_key_id,
+            new_key_id=KeyId("evil"),
+            new_public_key=b"\x11" * 32,
+            issued_at=9.0,  # NOT the tick key0 was retired at (5.0)
+            continuity_signature=b"",  # filled below with a real stale-key sig
+        )
+        stale_sig = signer.sign_with(evil_rec.continuity_message(), stale_key_id)
+        evil_rec.continuity_signature = stale_sig.value
+
+        # The signature is valid, but key0 is retired -> rejected on the chain-tip
+        # guard, and apply_rotation makes no state change.
+        assert not signer.verify_continuity(AgentId("signer"), evil_rec)
+        assert not signer.apply_rotation(evil_rec)
+
 
 class TestDidKeyCompatibility:
     def test_signature_key_id_signed_at_optional(self) -> None:

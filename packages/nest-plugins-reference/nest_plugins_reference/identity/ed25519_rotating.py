@@ -353,10 +353,14 @@ class Ed25519RotatingIdentity:
         """Verify a rotation's continuity signature against the agent's old key.
 
         Returns ``True`` iff ``rotation.continuity_signature`` is a valid
-        Ed25519 signature *by the old key* over the new key's published bytes.
+        Ed25519 signature *by the old key* over the new key's published bytes
+        **and** that old key is still the agent's current (unretired) chain tip.
         This is what proves an attacker holding only a stale key cannot mint a
         successor that peers will accept — they would also need the *current*
-        key to produce the next continuity signature.
+        key to produce the next continuity signature. Without the chain-tip
+        check a compromised, already-rotated-out key could authorise a fresh
+        successor (a retired-key injection), defeating the whole point of
+        rotation.
 
         Example::
 
@@ -367,6 +371,16 @@ class Ed25519RotatingIdentity:
             return False
         old = next((r for r in records if r.key_id == rotation.old_key_id), None)
         if old is None:
+            return False
+        # Only the current chain tip may authorise the next key. A key that was
+        # retired by an *earlier* rotation must never extend the identity chain,
+        # even though its continuity signature is cryptographically valid — that
+        # is the retired-key injection a compromised stale key would attempt.
+        # The legitimate case where ``old`` was closed by *this very* rotation
+        # (``old.rotated_out == rotation.issued_at``, as set in ``rotate_key``
+        # before signing) is still accepted, so an agent can verify its own
+        # freshly published rotation.
+        if old.rotated_out != _INF and old.rotated_out != rotation.issued_at:
             return False
         try:
             Ed25519PublicKey.from_public_bytes(old.public_key).verify(
