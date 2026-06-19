@@ -103,7 +103,7 @@ DEFAULT_CATEGORY_WEIGHTS: dict[str, float] = {
 # from saturating too fast preserves ordering between agents with more history.
 NORMALIZATION_K = 10.0
 
-# Collusion thresholds (VRP nanda-rep/0.2 §B). A non-anchor component isolated
+# Collusion-ring severance thresholds. A non-anchor component isolated
 # from the honest anchor is severed if it is a dense ring or a mutual-only pair.
 RING_MIN_SIZE = 3
 RING_MIN_DENSITY = 0.8
