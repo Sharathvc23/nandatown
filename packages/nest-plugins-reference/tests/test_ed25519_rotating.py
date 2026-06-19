@@ -218,6 +218,35 @@ class TestContinuity:
         assert not signer.verify_continuity(AgentId("signer"), evil_rec)
         assert not signer.apply_rotation(evil_rec)
 
+    def test_retired_key_injection_with_public_retire_tick(self) -> None:
+        """The retire tick is public, so matching it must NOT bypass the guard.
+
+        An attacker reads the rotation tick straight from the trace and sets
+        ``issued_at`` to it, trying to masquerade as the legitimate self-verify
+        case. The guard keys off successor-key membership, not the attacker-
+        controllable ``issued_at``, so the injection is still rejected.
+        """
+        from nest_plugins_reference.identity.ed25519_rotating import RotationRecord
+
+        signer = _ident("signer")
+        stale_key_id = signer.current_key_id
+        signer.set_clock(5.0)
+        signer.rotate_key(b"legit-new")  # key0 retired at the public tick 5.0
+
+        evil_rec = RotationRecord(
+            agent_id=AgentId("signer"),
+            old_key_id=stale_key_id,
+            new_key_id=KeyId("evil"),
+            new_public_key=b"\x11" * 32,
+            issued_at=5.0,  # == the public retire tick: must not grant a bypass
+            continuity_signature=b"",
+        )
+        evil_rec.continuity_signature = signer.sign_with(
+            evil_rec.continuity_message(), stale_key_id
+        ).value
+        assert not signer.verify_continuity(AgentId("signer"), evil_rec)
+        assert not signer.apply_rotation(evil_rec)
+
 
 class TestDidKeyCompatibility:
     def test_signature_key_id_signed_at_optional(self) -> None:

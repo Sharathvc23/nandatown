@@ -376,11 +376,17 @@ class Ed25519RotatingIdentity:
         # retired by an *earlier* rotation must never extend the identity chain,
         # even though its continuity signature is cryptographically valid — that
         # is the retired-key injection a compromised stale key would attempt.
-        # The legitimate case where ``old`` was closed by *this very* rotation
-        # (``old.rotated_out == rotation.issued_at``, as set in ``rotate_key``
-        # before signing) is still accepted, so an agent can verify its own
-        # freshly published rotation.
-        if old.rotated_out != _INF and old.rotated_out != rotation.issued_at:
+        #
+        # The legitimate case where ``old`` is already retired is when *this*
+        # rotation has already been applied (an agent re-verifying its own
+        # freshly published rotation): then ``rotation.new_key_id`` is present in
+        # the record list. We key off that membership rather than off
+        # ``rotation.issued_at`` — the retire tick is public (it appears in the
+        # trace), so an attacker could otherwise replay it to slip past the
+        # guard. The successor key id, by contrast, is only present once the
+        # genuine rotation has been adopted.
+        already_applied = any(r.key_id == rotation.new_key_id for r in records)
+        if old.rotated_out != _INF and not already_applied:
             return False
         try:
             Ed25519PublicKey.from_public_bytes(old.public_key).verify(
