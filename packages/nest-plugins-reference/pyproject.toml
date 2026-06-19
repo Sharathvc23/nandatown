@@ -19,8 +19,9 @@ dependencies = [
     "nest-core",
     "nest-sdk",
     # Real Ed25519 signing for the ed25519_rotating identity plugin
-    # (RFC 8032, deterministic). Required at runtime, so it lives in the
-    # package's hard dependencies — a bare `uv sync` installs it.
+    # (RFC 8032, deterministic) and the agent_receipts trust plugin.
+    # Required at runtime, so it lives in the package's hard
+    # dependencies — a bare `uv sync` installs it.
     "cryptography>=42.0",
 ]
 
