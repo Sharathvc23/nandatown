@@ -77,3 +77,17 @@ def _try_load_builtin(name: str) -> None:
         )
 
         register_scenario("identity_rotation", identity_rotation_factory)
+    elif name == "gossip_registry":
+        from nest_core.scenarios_builtin.gossip_registry import gossip_registry_factory
+
+        register_scenario("gossip_registry", gossip_registry_factory)
+    elif name == "memory_concurrent_writers":
+        from nest_core.scenarios_builtin.memory_concurrent_writers import (
+            memory_concurrent_writers_factory,
+        )
+
+        register_scenario("memory_concurrent_writers", memory_concurrent_writers_factory)
+    elif name == "comms_versioning":
+        from nest_core.scenarios_builtin.comms_versioning import comms_versioning_factory
+
+        register_scenario("comms_versioning", comms_versioning_factory)
