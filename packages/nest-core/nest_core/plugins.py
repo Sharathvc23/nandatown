@@ -20,6 +20,9 @@ _BUILTINS: dict[tuple[str, str], str] = {
     ("transport", "in_memory"): f"{_REF}.transport.in_memory:StandaloneInMemoryTransport",
     ("comms", "nest_native"): f"{_REF}.comms.nest_native:NestNativeComms",
     ("identity", "did_key"): f"{_REF}.identity.did_key:DidKeyIdentity",
+    ("identity", "ed25519_rotating"): (
+        f"{_REF}.identity.ed25519_rotating:Ed25519RotatingIdentity"
+    ),
     ("registry", "in_memory"): f"{_REF}.registry.in_memory:InMemoryRegistry",
     ("auth", "jwt"): f"{_REF}.auth.jwt_auth:JwtAuth",
     ("trust", "score_average"): f"{_REF}.trust.score_average:ScoreAverageTrust",
