@@ -49,9 +49,8 @@ import hashlib
 import json
 from typing import Any
 
-from nest_core.scenario import ScenarioConfig
-from nest_core.sim.agent import AgentContext, StateMachineAgent
-from nest_core.types import AgentId, Evidence
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 # The auditor instantiates the trust plugin lazily and imports the receipt
 # builders from the reference plugin so honest/ring receipts are constructed the
@@ -63,13 +62,9 @@ from nest_plugins_reference.trust.agent_receipts import (
     sign_receipt,
 )
 
-try:  # pragma: no cover - import guard
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-
-    _HAVE_CRYPTO = True
-except ImportError:  # pragma: no cover - cryptography is a declared dependency
-    _HAVE_CRYPTO = False
+from nest_core.scenario import ScenarioConfig
+from nest_core.sim.agent import AgentContext, StateMachineAgent
+from nest_core.types import AgentId, Evidence
 
 
 def _seed_for(agent: AgentId) -> bytes:

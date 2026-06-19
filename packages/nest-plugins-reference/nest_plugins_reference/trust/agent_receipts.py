@@ -54,6 +54,7 @@ Example::
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import logging
@@ -66,7 +67,6 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-
 from nest_core.types import (
     AgentId,
     Attestation,
@@ -153,10 +153,12 @@ def _issuer_payload(receipt: dict[str, Any]) -> bytes:
 
         payload = _issuer_payload(receipt)
     """
-    core = {k: v for k, v in receipt.items() if k != "signature"}
+    core: dict[str, Any] = {k: v for k, v in receipt.items() if k != "signature"}
     evidence = core.get("evidence")
     if isinstance(evidence, dict):
-        trimmed = {k: v for k, v in evidence.items() if k != "witness_signatures"}
+        trimmed: dict[str, Any] = {
+            k: v for k, v in cast("dict[str, Any]", evidence).items() if k != "witness_signatures"
+        }
         if trimmed:
             core["evidence"] = trimmed
         else:
@@ -213,6 +215,22 @@ def _verify_receipt(receipt: dict[str, Any]) -> bool:
     return _verify_ed25519(issuer, sig, _issuer_payload(receipt))
 
 
+def _action_field(receipt: dict[str, Any], key: str) -> Any:
+    """Return ``receipt["action"][key]`` (or ``None``) with a concrete dict type.
+
+    Centralizes the loosely-typed ``action`` access so the typed call sites stay
+    free of partially-unknown ``.get()`` chains.
+
+    Example::
+
+        cat = _action_field(receipt, "category")
+    """
+    action = receipt.get("action")
+    if isinstance(action, dict):
+        return cast("dict[str, Any]", action).get(key)
+    return None
+
+
 def _counterparty(receipt: dict[str, Any]) -> str | None:
     """The counterparty did iff present and distinct from the issuer.
 
@@ -223,7 +241,7 @@ def _counterparty(receipt: dict[str, Any]) -> str | None:
 
         cp = _counterparty(receipt)
     """
-    cp = (receipt.get("action") or {}).get("counterparty_did")
+    cp = _action_field(receipt, "counterparty_did")
     if isinstance(cp, str) and cp and cp != receipt.get("issuer_did"):
         return cp
     return None
@@ -243,12 +261,20 @@ def is_corroborated(receipt: dict[str, Any]) -> bool:
     cp = _counterparty(receipt)
     if cp is None:
         return False
-    witnesses = (receipt.get("evidence") or {}).get("witness_signatures") or []
+    evidence = receipt.get("evidence")
+    if not isinstance(evidence, dict):
+        return False
+    witnesses = cast("dict[str, Any]", evidence).get("witness_signatures")
+    if not isinstance(witnesses, list):
+        return False
     payload = _corroboration_payload(receipt)
-    for entry in witnesses:
-        if not isinstance(entry, dict) or entry.get("witness_did") != cp:
+    for entry in cast("list[Any]", witnesses):
+        if not isinstance(entry, dict):
             continue
-        if _verify_ed25519(cp, str(entry.get("signature", "")), payload):
+        typed: dict[str, Any] = cast("dict[str, Any]", entry)
+        if typed.get("witness_did") != cp:
+            continue
+        if _verify_ed25519(cp, str(typed.get("signature", "")), payload):
             return True
     return False
 
@@ -415,10 +441,7 @@ def _raw_reputation(receipts: list[dict[str, Any]], weights: dict[str, float]) -
 
         raw = _raw_reputation(eff, DEFAULT_CATEGORY_WEIGHTS)
     """
-    return sum(
-        weights.get((r.get("action") or {}).get("category", ""), 0.0)
-        for r in receipts
-    )
+    return sum(weights.get(str(_action_field(r, "category") or ""), 0.0) for r in receipts)
 
 
 def _normalize(raw: float) -> float:
@@ -469,11 +492,18 @@ def cosign_receipt(receipt: dict[str, Any], *, counterparty_seed: bytes) -> dict
     sk = Ed25519PrivateKey.from_private_bytes(counterparty_seed)
     witness_did = sk.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex()
     sig = sk.sign(_corroboration_payload(receipt))
-    entry = {"witness_did": witness_did, "signature": sig.hex()}
-    out = json.loads(json.dumps(receipt))  # deep copy via round-trip
+    entry: dict[str, str] = {"witness_did": witness_did, "signature": sig.hex()}
+    out: dict[str, Any] = copy.deepcopy(receipt)
     evidence = out.setdefault("evidence", {})
-    evidence.setdefault("witness_signatures", []).append(entry)
-    return cast("dict[str, Any]", out)
+    if not isinstance(evidence, dict):
+        evidence = {}
+        out["evidence"] = evidence
+    witnesses = cast("dict[str, Any]", evidence).setdefault("witness_signatures", [])
+    if not isinstance(witnesses, list):
+        witnesses = []
+        cast("dict[str, Any]", evidence)["witness_signatures"] = witnesses
+    cast("list[Any]", witnesses).append(entry)
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -753,6 +753,7 @@ class TestValidatorRegistry:
             "memory_concurrent_writers",
             "streaming_payments",
             "comms_versioning",
+            "receipt_reputation",
         }
         assert set(VALIDATORS.keys()) == expected
 
