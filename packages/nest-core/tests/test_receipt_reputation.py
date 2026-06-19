@@ -26,11 +26,13 @@ _SCENARIO_YAML = (
 )
 
 
-def _config(trust: str, trace: Path) -> ScenarioConfig:
-    """Load the scenario YAML, override the trust plugin and trace path."""
+def _config(trust: str, trace: Path, seed: int | None = None) -> ScenarioConfig:
+    """Load the scenario YAML, override the trust plugin, seed, and trace path."""
     config = ScenarioConfig.from_yaml(_SCENARIO_YAML)
     config.layers.trust = trust
     config.output.trace = str(trace)
+    if seed is not None:
+        config.seed = seed
     return config
 
 
@@ -39,10 +41,13 @@ def _results(trace: Path) -> dict[str, bool]:
 
 
 class TestAdversarialProof:
+    # Seed-bank robustness: the leaderboard re-runs under multiple seeds, so the
+    # adversarial proof must hold across the bank, not just the default seed.
     @pytest.mark.asyncio
-    async def test_validator_passes_under_agent_receipts(self, tmp_path: Path) -> None:
-        trace = tmp_path / "ours.jsonl"
-        await ScenarioRunner(_config("agent_receipts", trace)).run()
+    @pytest.mark.parametrize("seed", [1, 7, 42, 123, 9999])
+    async def test_validator_passes_under_agent_receipts(self, tmp_path: Path, seed: int) -> None:
+        trace = tmp_path / f"ours_{seed}.jsonl"
+        await ScenarioRunner(_config("agent_receipts", trace, seed=seed)).run()
         results = _results(trace)
         assert results["receipt_reputation_ring_severed"] is True
         assert results["receipt_reputation_honest_confidence"] is True
