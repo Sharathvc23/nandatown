@@ -105,6 +105,58 @@ class TestAsOfCorrectness:
         in_old_window = 0.0 <= obs < rotate_at
         assert ident.verify(payload, old_sig, AgentId("a1"), as_of=obs) == in_old_window
 
+    @settings(max_examples=50, deadline=None)
+    @given(
+        payload=_payloads,
+        seed=_seeds,
+        rotations=st.integers(min_value=1, max_value=5),
+        gaps=st.lists(st.integers(min_value=1, max_value=500), min_size=5, max_size=5),
+        obs=_ticks,
+    )
+    def test_as_of_selects_correct_key_across_full_history(
+        self,
+        payload: bytes,
+        seed: bytes,
+        rotations: int,
+        gaps: list[int],
+        obs: float,
+    ) -> None:
+        """Generalises invariants 2 + 5 over a *multi-rotation* key history.
+
+        Build ``rotations`` keys at strictly ascending rotation ticks, signing
+        one payload under each key while it is current. The resulting windows are
+        ``[0, t1), [t1, t2), ..., [tN, +inf)``. For an arbitrary observed tick,
+        each signature must verify **iff** that tick lies in its own key's
+        ``[issued_at, rotated_out)`` window — proving as-of *selection* picks the
+        right key out of a real history, not just a single rotation. Oracle is
+        the independent numeric window bound."""
+        ident = _ident(seed=seed)
+
+        # Rotation ticks strictly ascending: cumulative sum of positive gaps.
+        rotate_ticks: list[float] = []
+        t = 0.0
+        for i in range(rotations):
+            t += float(gaps[i])
+            rotate_ticks.append(t)
+
+        # Key windows: key0=[0, r0), key1=[r0, r1), ..., keyN=[r_{N-1}, inf).
+        boundaries = [0.0, *rotate_ticks, float("inf")]
+        signed: list[tuple[Signature, float, float]] = []  # (sig, issued, rotated_out)
+        for i in range(rotations + 1):
+            issued = boundaries[i]
+            rotated_out = boundaries[i + 1]
+            # Sign while this key is current: clock at its issue tick (>= prior,
+            # so set_clock takes; first key issued at 0 == initial clock).
+            ident.set_clock(issued)
+            signed.append((ident.sign(payload), issued, rotated_out))
+            if i < rotations:  # rotate into the next key at its boundary tick
+                ident.set_clock(rotate_ticks[i])
+                ident.rotate_key(b"seed-%d" % i)
+
+        for sig, issued, rotated_out in signed:
+            expected = issued <= obs < rotated_out
+            assert ident.verify(payload, sig, AgentId("a1"), as_of=obs) == expected
+
 
 # ---------------------------------------------------------------------------
 # 3. Post-rotation forgery always fails
@@ -163,6 +215,9 @@ class TestBackdating:
             return
         backdated = max(0.0, rotate_at - 1.0 - back_delta)
         assert backdated < rotate_at
+        # Forge the advisory claim too: the attacker stamps signed_at to the old
+        # tick. The verifier must ignore it and anchor on the observed as_of.
+        new_sig.signed_at = backdated
         assert not ident.verify(payload, new_sig, AgentId("a1"), as_of=backdated)
 
 
