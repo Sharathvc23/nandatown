@@ -1668,6 +1668,173 @@ def validate_comms_no_silent_drop(
 
 
 # ---------------------------------------------------------------------------
+# Receipt-reputation (collusion-ring) validators
+# ---------------------------------------------------------------------------
+
+# An effectively-severed reputation is anything at or below this. A severed ring
+# member scores exactly 0.0 under ``agent_receipts``; ``score_average`` rewards
+# the (all-positive) ring to ~1.0, far above this floor.
+_RING_SEVERED_MAX = 1e-6
+
+
+def _collect_scores(events: list[dict[str, Any]]) -> dict[str, tuple[float, float, str]]:
+    """Parse ``score:<agent>:<score>:<confidence>:<role>`` lines from the trace.
+
+    Returns ``agent -> (score, confidence, role)`` using the *last* score line
+    seen for each agent (the finalize pass emits one per agent). The scores are
+    produced by the live trust plugin, so this dict differs by configured plugin
+    -- which is what lets the validator discriminate.
+
+    Example::
+
+        scores = _collect_scores(events)
+    """
+    scores: dict[str, tuple[float, float, str]] = {}
+    for ev in events:
+        if ev.get("kind") not in ("send", "broadcast"):
+            continue
+        msg = _message_body(ev)
+        if not msg.startswith("score:"):
+            continue
+        parts = msg.split(":")
+        if len(parts) < 5:
+            continue
+        agent, score_raw, conf_raw, role = parts[1], parts[2], parts[3], parts[4]
+        try:
+            score = float(score_raw)
+            confidence = float(conf_raw)
+        except ValueError:
+            continue
+        scores[agent] = (score, confidence, role)
+    return scores
+
+
+def validate_receipt_reputation_ring_severed(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """The isolated collusion ring is severed while honest agents are retained.
+
+    Reads the trust plugin's own ``score:`` lines from the trace (never recomputes
+    reputation itself -- the discrimination must come from the configured plugin).
+    The protocol holds iff:
+
+    * at least one ``ring`` agent and one ``honest`` agent were scored (the
+      scenario actually exercised both populations),
+    * **every** ``ring`` agent scored ``<= 1e-6`` (its wash-traded reputation was
+      severed to ~0), and
+    * **every** ``honest`` agent scored ``> 1e-6`` (the honest anchor retained
+      its corroborated reputation -- guards against a degenerate all-zero plugin).
+
+    ``trust: score_average`` FAILS this: it has no notion of corroboration and
+    rewards the ring's all-positive reports to ~1.0. ``trust: agent_receipts``
+    PASSES: the ring is an isolated dense SCC that collusion severance voids,
+    while the honest cycle is the anchor. A plugin that emits no ``score:`` lines
+    (or scores everyone 0) also fails -- without crashing.
+
+    Example::
+
+        results = validate_receipt_reputation_ring_severed(events)
+    """
+    scores = _collect_scores(events)
+    ring = {a: s for a, (s, _c, role) in scores.items() if role == "ring"}
+    honest = {a: s for a, (s, _c, role) in scores.items() if role == "honest"}
+
+    if not ring or not honest:
+        return [
+            ValidationResult(
+                "receipt_reputation_ring_severed",
+                False,
+                f"missing populations: {len(ring)} ring, {len(honest)} honest scored",
+            )
+        ]
+
+    rewarded_ring = {a: s for a, s in ring.items() if s > _RING_SEVERED_MAX}
+    dropped_honest = {a: s for a, s in honest.items() if s <= _RING_SEVERED_MAX}
+
+    problems: list[str] = []
+    if rewarded_ring:
+        problems.append(
+            "ring not severed: "
+            + ", ".join(f"{a}={s:.4f}" for a, s in sorted(rewarded_ring.items()))
+        )
+    if dropped_honest:
+        problems.append(
+            "honest not retained: "
+            + ", ".join(f"{a}={s:.4f}" for a, s in sorted(dropped_honest.items()))
+        )
+
+    if problems:
+        return [ValidationResult("receipt_reputation_ring_severed", False, "; ".join(problems))]
+    return [
+        ValidationResult(
+            "receipt_reputation_ring_severed",
+            True,
+            f"{len(ring)} ring agents severed to ~0, {len(honest)} honest agents retained",
+        )
+    ]
+
+
+def validate_receipt_reputation_honest_confidence(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """Honest agents carry positive corroboration confidence; the ring does not.
+
+    A second, independent invariant: ``confidence`` (corroboration rate) must be
+    positive for every honest agent and zero for every severed ring agent. This
+    distinguishes a real collusion-resistant plugin from one that merely zeroes
+    the ring's score by accident -- the ring's *confidence* collapsing to 0 is the
+    signal that its corroborations were voided, not just its weights.
+
+    ``score_average`` reports a non-zero confidence for the ring (it counts
+    samples), so it FAILS; ``agent_receipts`` reports ring confidence 0 and
+    honest confidence > 0, so it PASSES.
+
+    Example::
+
+        results = validate_receipt_reputation_honest_confidence(events)
+    """
+    scores = _collect_scores(events)
+    ring_conf = {a: c for a, (_s, c, role) in scores.items() if role == "ring"}
+    honest_conf = {a: c for a, (_s, c, role) in scores.items() if role == "honest"}
+
+    if not ring_conf or not honest_conf:
+        return [
+            ValidationResult(
+                "receipt_reputation_honest_confidence",
+                False,
+                f"missing populations: {len(ring_conf)} ring, {len(honest_conf)} honest scored",
+            )
+        ]
+
+    ring_corroborated = {a: c for a, c in ring_conf.items() if c > _RING_SEVERED_MAX}
+    honest_uncorroborated = {a: c for a, c in honest_conf.items() if c <= _RING_SEVERED_MAX}
+
+    problems: list[str] = []
+    if ring_corroborated:
+        problems.append(
+            "ring retains corroboration confidence: "
+            + ", ".join(f"{a}={c:.4f}" for a, c in sorted(ring_corroborated.items()))
+        )
+    if honest_uncorroborated:
+        problems.append(
+            "honest lacks corroboration confidence: "
+            + ", ".join(f"{a}={c:.4f}" for a, c in sorted(honest_uncorroborated.items()))
+        )
+
+    if problems:
+        return [
+            ValidationResult("receipt_reputation_honest_confidence", False, "; ".join(problems))
+        ]
+    return [
+        ValidationResult(
+            "receipt_reputation_honest_confidence",
+            True,
+            f"{len(honest_conf)} honest corroborated, {len(ring_conf)} ring collapsed to 0",
+        )
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Validator registry
 # ---------------------------------------------------------------------------
 
@@ -1717,5 +1884,9 @@ VALIDATORS: dict[str, list[Any]] = {
         validate_streaming_conservation,
         validate_streaming_no_drain_after_close,
         validate_streaming_no_overbill_on_partition,
+    ],
+    "receipt_reputation": [
+        validate_receipt_reputation_ring_severed,
+        validate_receipt_reputation_honest_confidence,
     ],
 }
