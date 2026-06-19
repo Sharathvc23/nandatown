@@ -629,6 +629,7 @@ class TestValidatorRegistry:
             "consensus",
             "supply_chain",
             "reputation",
+            "identity_rotation",
         }
         assert set(VALIDATORS.keys()) == expected
 

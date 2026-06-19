@@ -65,7 +65,6 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
     Ed25519PublicKey,
 )
-
 from nest_core.types import AgentId, AgentIdentity, Signature
 
 ALGORITHM = "ed25519-rotating/1"
