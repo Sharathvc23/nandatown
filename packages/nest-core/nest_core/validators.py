@@ -887,6 +887,218 @@ def validate_reputation_warnings(
 
 
 # ---------------------------------------------------------------------------
+# Identity key-rotation validators
+# ---------------------------------------------------------------------------
+
+_INF = float("inf")
+
+
+class _KeyWindow:
+    """Validity window ``[issued_at, rotated_out)`` for one signing key.
+
+    Example::
+
+        w = _KeyWindow(issued_at=0.0)
+        assert w.contains(0.0) and not w.contains(w.rotated_out)
+    """
+
+    def __init__(self, issued_at: float, rotated_out: float = _INF) -> None:
+        self.issued_at = issued_at
+        self.rotated_out = rotated_out
+
+    def contains(self, tick: float) -> bool:
+        """Return whether *tick* falls inside the half-open window.
+
+        Example::
+
+            assert _KeyWindow(0.0, 10.0).contains(5.0)
+        """
+        return self.issued_at <= tick < self.rotated_out
+
+
+def _parse_tick(raw: str) -> float | None:
+    """Parse a trace tick token to ``float``; ``None`` if unparseable.
+
+    ``did_key`` emits ``None`` for ``signed_at`` (it has no rotation concept),
+    so this never raises — it returns ``None`` and the caller treats the
+    signature as window-invalid.
+
+    Example::
+
+        assert _parse_tick("3.0") == 3.0 and _parse_tick("None") is None
+    """
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_key_windows(events: list[dict[str, Any]]) -> dict[str, _KeyWindow]:
+    """Reconstruct per-key validity windows from ``rotate:`` trace lines.
+
+    A line ``rotate:<agent>:<old_key_id>:<new_key_id>:<rotate_tick>`` closes the
+    old key's window at ``rotate_tick`` and opens the new key's window there.
+    Keys never named in a rotation but seen signing (e.g. an agent's first key)
+    are seeded lazily by :func:`validate_identity_rotation_signatures` with an
+    open window from tick 0. ``key_id`` is a ``sha256`` digest, so keying the
+    map by ``key_id`` alone is unambiguous across agents.
+
+    Example::
+
+        windows = _build_key_windows(events)
+    """
+    windows: dict[str, _KeyWindow] = {}
+    for ev in events:
+        if ev.get("kind") != "send":
+            continue
+        msg = _message_body(ev)
+        if not msg.startswith("rotate:"):
+            continue
+        parts = msg.split(":")
+        if len(parts) < 5:
+            continue
+        old_key_id, new_key_id = parts[2], parts[3]
+        rotate_tick = _parse_tick(parts[4])
+        if rotate_tick is None:
+            continue
+        old = windows.setdefault(old_key_id, _KeyWindow(issued_at=0.0))
+        old.rotated_out = rotate_tick
+        windows[new_key_id] = _KeyWindow(issued_at=rotate_tick)
+    return windows
+
+
+def validate_identity_rotation_signatures(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """Honest signatures verify and *both* attacks are rejected as-of the trace.
+
+    The scenario emits ``signed:<agent>:<key_id>:<claimed_tick>:<verdict>`` lines
+    where ``verdict`` is ``ok`` (honest), ``forge`` (post-rotation forgery with a
+    rotated-out key), or ``backdate`` (a new-key signature whose claimed tick is
+    moved back into the old key's window).
+
+    A signature is **window-valid** iff the window of its ``key_id`` contains
+    **both** the externally observed event tick (``ev["ts"]``) *and* the claimed
+    ``signed_at`` tick. Anchoring to the observed tick defeats post-rotation
+    forgery (observed after ``rotated_out``); also requiring the claimed tick to
+    land in the same window defeats backdating (the new key's window does not
+    contain the backdated old tick). The verifier never trusts the claimed tick
+    as the *authority* — it is one of two coordinates both of which must agree.
+
+    The protocol holds iff every honest ``ok`` line is window-valid **and** every
+    ``forge``/``backdate`` line is window-invalid. ``did_key`` cannot satisfy
+    this: it emits no ``rotate:`` lines and a ``None`` ``key_id``, so honest
+    signatures resolve to no window and the check fails (without crashing).
+
+    Example::
+
+        results = validate_identity_rotation_signatures(events)
+    """
+    windows = _build_key_windows(events)
+    honest_invalid: list[str] = []
+    attacks_accepted: list[str] = []
+    ok_count = 0
+    attack_count = 0
+
+    for ev in events:
+        if ev.get("kind") != "send":
+            continue
+        msg = _message_body(ev)
+        if not msg.startswith("signed:"):
+            continue
+        parts = msg.split(":")
+        if len(parts) < 5:
+            continue
+        agent, key_id, claimed_raw, verdict = parts[1], parts[2], parts[3], parts[4]
+        observed_tick = _parse_tick(str(ev.get("ts")))
+        claimed_tick = _parse_tick(claimed_raw)
+
+        window = windows.get(key_id)
+        # A key with no rotation history but seen signing is its agent's first,
+        # still-open key; seed an open window from tick 0 so honest pre-rotation
+        # signatures resolve. did_key's ``None`` key_id never matches this path.
+        if window is None and key_id and key_id != "None" and verdict == "ok":
+            window = windows.setdefault(key_id, _KeyWindow(issued_at=0.0))
+
+        window_valid = (
+            window is not None
+            and observed_tick is not None
+            and claimed_tick is not None
+            and window.contains(observed_tick)
+            and window.contains(claimed_tick)
+        )
+
+        if verdict == "ok":
+            ok_count += 1
+            if not window_valid:
+                honest_invalid.append(
+                    f"{agent} honest sig key={key_id[:8]} "
+                    f"observed={observed_tick} claimed={claimed_tick} not in a valid window"
+                )
+        else:
+            attack_count += 1
+            if window_valid:
+                attacks_accepted.append(
+                    f"{agent} {verdict} sig key={key_id[:8]} "
+                    f"observed={observed_tick} claimed={claimed_tick} accepted"
+                )
+
+    problems = honest_invalid + attacks_accepted
+    if problems:
+        return [
+            ValidationResult(
+                "identity_rotation_signatures",
+                False,
+                "; ".join(problems),
+            )
+        ]
+    return [
+        ValidationResult(
+            "identity_rotation_signatures",
+            True,
+            f"{ok_count} honest signatures valid, {attack_count} attacks rejected",
+        )
+    ]
+
+
+def validate_identity_rotation_occurred(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """At least one key rotation happened over the run.
+
+    The rotation feature is the whole point of the scenario: a trace with no
+    ``rotate:`` line never exercised it. ``did_key`` cannot rotate, so it emits
+    none and fails here — the honest demonstration that it lacks the capability.
+
+    Example::
+
+        results = validate_identity_rotation_occurred(events)
+    """
+    rotations = 0
+    for ev in events:
+        if ev.get("kind") != "send":
+            continue
+        if _message_body(ev).startswith("rotate:"):
+            rotations += 1
+
+    if rotations == 0:
+        return [
+            ValidationResult(
+                "identity_rotation_occurred",
+                False,
+                "no key rotations found (identity plugin does not support rotation)",
+            )
+        ]
+    return [
+        ValidationResult(
+            "identity_rotation_occurred",
+            True,
+            f"{rotations} key rotations observed",
+        )
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Validator registry
 # ---------------------------------------------------------------------------
 
@@ -919,5 +1131,9 @@ VALIDATORS: dict[str, list[Any]] = {
     "reputation": [
         validate_reputation_scoring,
         validate_reputation_warnings,
+    ],
+    "identity_rotation": [
+        validate_identity_rotation_occurred,
+        validate_identity_rotation_signatures,
     ],
 }
