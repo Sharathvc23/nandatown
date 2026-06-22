@@ -1,75 +1,32 @@
-# Example: Stripe payment → sealed Agent Action Capsule
+# Payments layer: `stripe_capsule`
 
-Wrap the NANDA `Payments` layer so every completed payment is sealed in
-an [Agent Action Capsule][]. The capsule records the Stripe `payment_intent_id`,
-amount, currency, and outcome — independently verifiable by any third
-party without replaying the transaction.
+Wrap the NANDA `Payments` layer so every completed payment is sealed in an
+[Agent Action Capsule][]. The capsule records the Stripe `payment_intent_id`,
+amount, currency, and outcome — independently verifiable by any third party
+without replaying the transaction.
 
-## The pattern
+**Sandbox by default** — no `STRIPE_SECRET_KEY` required, no real charges.
 
-```python
-# SPDX-License-Identifier: Apache-2.0
-import stripe
-import capsule_emit
-from nest_core.types import AgentId
+## Install
 
-class StripeCapsuledPayments:
-    """NANDA Payments plugin: Stripe + capsule-emit."""
-
-    async def pay(
-        self,
-        payer: AgentId,
-        payee: AgentId,
-        amount: float,
-        currency: str = "usd",
-        **metadata,
-    ) -> dict:
-        intent = stripe.PaymentIntent.create(
-            amount=int(amount * 100),          # Stripe uses cents
-            currency=currency,
-            confirm=True,
-            automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
-        )
-        # Seal the outcome — agent_input_digest commits to amount + intent id
-        capsule_emit.emit(
-            action="stripe_payment",
-            operator=str(payer),
-            developer="stripe-capsule-payments@v1",
-            agent_input={
-                "payer": str(payer),
-                "payee": str(payee),
-                "amount_usd": amount,
-                "currency": currency,
-            },
-            agent_output={
-                "payment_intent_id": intent.id,
-                "status": intent.status,
-                "amount_received": intent.amount_received / 100,
-            },
-            verdict="executed",
-            effect={"type": "stripe_payment", "status": intent.status},
-        )
-        return {"payment_intent_id": intent.id, "status": intent.status}
-
-    async def verify_payment(self, payment_ref: dict) -> bool:
-        intent = stripe.PaymentIntent.retrieve(payment_ref["payment_intent_id"])
-        return intent.status == "succeeded"
+```bash
+pip install -e examples/capsule-emit         # sandbox (no Stripe key needed)
+pip install -e "examples/capsule-emit[stripe]"   # real Stripe payments
 ```
 
-## Register as a NANDA plugin
+## Use in any scenario YAML
 
-```toml
-# pyproject.toml
-[project.entry-points."nest.plugins.payments"]
-stripe_capsule = "my_pkg.stripe_capsule:StripeCapsuledPayments"
-
-[project.optional-dependencies]
-nanda = ["capsule-emit", "stripe>=7.0"]
+```yaml
+layers:
+  payments: stripe_capsule
 ```
 
 ```bash
-pip install -e .[nanda]
-STRIPE_SECRET_KEY=sk_test_... nest run ./scenarios/marketplace.yaml  # layers.payments: stripe_capsule
+# Sandbox (default, no key needed):
+nest run ./scenario.yaml
+
+# Real Stripe:
+STRIPE_SECRET_KEY=sk_test_... nest run ./scenario.yaml
 ```
 
 ## What the capsule proves
@@ -83,32 +40,42 @@ agent-action-capsule verify --store capsule_ledger.jsonl
 Each capsule's `agent_input_digest` commits to the exact amount and
 payer/payee pair at the moment the Stripe call was made. If a client
 later disputes the amount, re-derive the digest from the disputed values
-and compare to the sealed digest — a mismatch is proof the amount was
-altered post-payment.
+and compare — a mismatch is proof the amount was altered post-payment.
 
-## Running offline (mock Stripe)
-
-To run without real credentials, pass a mock client:
+## The pattern
 
 ```python
-import capsule_emit, unittest.mock
+# SPDX-License-Identifier: Apache-2.0
+# From capsule_emit_nanda/payments.py
 
-mock_stripe = unittest.mock.MagicMock()
-mock_stripe.PaymentIntent.create.return_value = unittest.mock.MagicMock(
-    id="pi_mock_abc123", status="succeeded", amount_received=2500
-)
+import capsule_emit
+from nest_core.types import AgentId
 
-plugin = StripeCapsuledPayments(stripe_client=mock_stripe)
+class StripeCapsuledPayments:
+    async def pay(self, payer: AgentId, payee: AgentId, amount: float,
+                  currency: str = "usd", **metadata) -> dict:
+        # Execute Stripe payment (or sandbox)
+        result = _stripe_pay(payer, payee, amount, currency)
+
+        # Seal the outcome — agent_input_digest commits to amount + intent id
+        capsule_emit.emit(
+            action="stripe_payment",
+            operator=str(payer),
+            developer="stripe-capsule-payments@v1",
+            agent_input={"payer": str(payer), "payee": str(payee),
+                         "amount_usd": amount, "currency": currency},
+            agent_output=result,
+            verdict="executed",
+            effect={"type": "stripe_payment", "status": result["status"]},
+        )
+        return result
 ```
-
-The capsule is still sealed and verifiable regardless of whether the
-underlying Stripe call is real or mocked.
 
 ## Reference
 
+- Plugin package: [`examples/capsule-emit/`](../capsule-emit/)
 - `capsule-emit` repo: <https://github.com/action-state-group/capsule-emit>
 - Payments layer interface: [`docs/layers/payments.md`](../../docs/layers/payments.md)
 - Reference payments plugin: [`prepaid_credits.py`](../../packages/nest-plugins-reference/nest_plugins_reference/payments/prepaid_credits.py)
-- Plugin walkthrough: [`docs/writing-a-plugin.md`](../../docs/writing-a-plugin.md)
 
-[Agent Action Capsule]: https://datatracker.ietf.org/doc/draft-steele-agent-action-capsule/
+[Agent Action Capsule]: https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule/

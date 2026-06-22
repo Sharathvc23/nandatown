@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: Apache-2.0
+[project]
+name = "capsule-emit-nanda"
+version = "0.1.0"
+description = "Verifiable, anchored records for NANDA agents — CapsuleEmitTrust + StripeCapsuledPayments plugins"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dependencies = [
+    "capsule-emit>=0.1.1",
+    "agent-action-capsule>=0.0.3",
+    "nest-core>=0.1.4",
+    "nest-plugins-reference>=0.1.1",
+    "cryptography>=41.0",
+]
+
+[project.optional-dependencies]
+stripe = ["stripe>=7.0"]
+
+[project.entry-points."nest.plugins.trust"]
+capsule_emit = "capsule_emit_nanda.trust:CapsuleEmitTrust"
+
+[project.entry-points."nest.plugins.payments"]
+stripe_capsule = "capsule_emit_nanda.payments:StripeCapsuledPayments"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["capsule_emit_nanda"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

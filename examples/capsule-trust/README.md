@@ -1,10 +1,9 @@
-# Example: Anchored-capsule trust layer
+# Trust layer: `capsule_emit`
 
-Swap `trust: agent_receipts` for `trust: capsule_emit` to add a
-**verifiable, third-party-auditable ledger** to any NANDA scenario.
-Every interaction report becomes a sealed [Agent Action Capsule][]
-whose `agent_input_digest` is independently verifiable — no agent self-
-report can be altered without the mismatch being detected.
+Drop-in for `trust: agent_receipts` that adds a **verifiable, third-party-auditable
+ledger** to any NANDA scenario. Every interaction report becomes a sealed
+[Agent Action Capsule][] whose `agent_input_digest` is independently verifiable —
+no agent self-report can be altered without the mismatch being detected.
 
 ## What this adds over `agent_receipts`
 
@@ -18,8 +17,8 @@ report can be altered without the mismatch being detected.
 ## Install
 
 ```bash
-pip install capsule-emit[nanda]   # installs nanda-capsule-trust entry point
-nest plugins list | grep trust    # capsule_emit should appear
+pip install -e examples/capsule-emit   # from the nandatown repo root
+nest plugins list | grep trust         # capsule_emit should appear
 ```
 
 ## Swap in any scenario YAML
@@ -32,9 +31,7 @@ layers:
 Run against the bundled `receipt_reputation` scenario:
 
 ```bash
-nest scenarios cp receipt_reputation ./my_capsule_trust.yaml
-# edit my_capsule_trust.yaml: set layers.trust: capsule_emit
-nest run ./my_capsule_trust.yaml
+nest run scenarios/receipt_reputation_capsule.yaml
 ```
 
 The `receipt_reputation` validators still pass — ring mean ≈ 0.0, honest
@@ -63,9 +60,10 @@ Full source and demo script:
 
 ## Reference
 
+- Plugin package: [`examples/capsule-emit/`](../capsule-emit/)
 - `capsule-emit` repo: <https://github.com/action-state-group/capsule-emit>
 - Trust layer interface: [`docs/layers/trust.md`](../../docs/layers/trust.md)
 - Scenario YAML for this example: [`scenarios/receipt_reputation_capsule.yaml`](../../scenarios/receipt_reputation_capsule.yaml)
 - Reference implementation to compare: [`agent_receipts.py`](../../packages/nest-plugins-reference/nest_plugins_reference/trust/agent_receipts.py)
 
-[Agent Action Capsule]: https://datatracker.ietf.org/doc/draft-steele-agent-action-capsule/
+[Agent Action Capsule]: https://datatracker.ietf.org/doc/draft-mih-scitt-agent-action-capsule/
