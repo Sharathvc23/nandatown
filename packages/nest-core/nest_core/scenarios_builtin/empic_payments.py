@@ -152,22 +152,35 @@ class WeatherProviderAgent(StateMachineAgent):
             if "pubsub" in self._delivery_modes
             else None
         )
+        schema = {
+            "required_fields": [
+                "temperature_c",
+                "temperature_f",
+                "windspeed_kmh",
+                "timestamp",
+                "tick",
+            ]
+        }
         payments.register_service(
             service_id=self._service_id,
             provider=self._id,
             price=Money(amount=50),
             delivery_modes=self._delivery_modes,
-            schema={
-                "required_fields": [
-                    "temperature_c",
-                    "temperature_f",
-                    "windspeed_kmh",
-                    "timestamp",
-                    "tick",
-                ]
-            },
+            schema=schema,
             pubsub_terms=terms,
             metadata={"behavior": self._behavior},
+        )
+        terms_payload = (
+            {
+                "rate_per_tick": terms.rate_per_tick,
+                "max_total": terms.max_total,
+                "duration_ticks": terms.duration_ticks,
+                "min_valid_ratio": terms.min_valid_ratio,
+                "min_msg_count": terms.min_msg_count,
+                "auto_renew": terms.auto_renew,
+            }
+            if terms is not None
+            else None
         )
         await _audit(
             ctx,
@@ -177,6 +190,8 @@ class WeatherProviderAgent(StateMachineAgent):
                 "provider": str(self._id),
                 "delivery_modes": list(self._delivery_modes),
                 "price": 50,
+                "schema": schema,
+                "pubsub_terms": terms_payload,
             },
         )
 
@@ -280,6 +295,20 @@ class WeatherConsumerAgent(StateMachineAgent):
             return
 
         quote = await payments.quote(self._service_id)
+        await _audit(
+            ctx,
+            {
+                "event_type": "empic_acceptance_policy",
+                "payment_ref": str(self._ref),
+                "service_id": str(self._service_id),
+                "payer": str(self._id),
+                "provider": str(self._provider),
+                "mode": self._mode,
+                "request_params": self._request_params,
+                "policy": self._policy,
+                "max_spend": self._max_spend,
+            },
+        )
         if quote.price.amount > self._max_spend:
             await _audit(
                 ctx,
@@ -304,6 +333,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                 {
                     "event_type": "empic_escrow_debited",
                     "payment_ref": str(self._ref),
+                    "service_id": str(self._service_id),
                     "payer": str(self._id),
                     "provider": str(self._provider),
                     "amount": quote.price.amount,
@@ -328,10 +358,13 @@ class WeatherConsumerAgent(StateMachineAgent):
                 {
                     "event_type": "empic_stream_opened",
                     "payment_ref": str(self._ref),
+                    "service_id": str(self._service_id),
                     "payer": str(self._id),
                     "provider": str(self._provider),
                     "amount": terms.max_total,
                     "rate_per_tick": terms.rate_per_tick,
+                    "max_total": terms.max_total,
+                    "duration_ticks": terms.duration_ticks,
                     "mode": "pubsub",
                 },
             )
@@ -340,6 +373,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                 {
                     "event_type": "empic_escrow_debited",
                     "payment_ref": str(self._ref),
+                    "service_id": str(self._service_id),
                     "payer": str(self._id),
                     "provider": str(self._provider),
                     "amount": terms.max_total,
@@ -414,6 +448,9 @@ class WeatherConsumerAgent(StateMachineAgent):
                 "payment_ref": str(self._ref),
                 "service_id": str(self._service_id),
                 "provider": str(self._provider),
+                "delivery_service_id": str(delivery.get("service_id", "")),
+                "delivery_provider_id": str(delivery.get("provider_id", "")),
+                "request_params": delivery.get("request_params", {}),
                 "accepted": accepted,
                 "reason": reason,
                 "mode": self._mode,
@@ -431,6 +468,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                         "event_type": "empic_escrow_released",
                         "delivery_id": delivery_id,
                         "payment_ref": str(self._ref),
+                        "service_id": str(self._service_id),
                         "payer": str(self._id),
                         "provider": str(self._provider),
                         "amount": receipt.amount.amount,
@@ -447,6 +485,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                         "event_type": "empic_escrow_refunded",
                         "delivery_id": delivery_id,
                         "payment_ref": str(self._ref),
+                        "service_id": str(self._service_id),
                         "payer": str(self._id),
                         "amount": refund_amount,
                         "reason": reason,
@@ -468,6 +507,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                         "event_type": "empic_escrow_released",
                         "delivery_id": delivery_id,
                         "payment_ref": str(self._ref),
+                        "service_id": str(self._service_id),
                         "payer": str(self._id),
                         "provider": str(self._provider),
                         "amount": released,
@@ -491,6 +531,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                 {
                     "event_type": "empic_escrow_refunded",
                     "payment_ref": str(self._ref),
+                    "service_id": str(self._service_id),
                     "payer": str(self._id),
                     "amount": refund_amount,
                     "reason": "stream closed",
@@ -502,6 +543,7 @@ class WeatherConsumerAgent(StateMachineAgent):
             {
                 "event_type": "empic_stream_closed",
                 "payment_ref": str(self._ref),
+                "service_id": str(self._service_id),
                 "payer": str(self._id),
                 "provider": str(self._provider),
                 "mode": "pubsub",
