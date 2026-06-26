@@ -31,7 +31,10 @@ delivered; pubsub mode pre-funds a maximum stream amount, releases one
 tick for each accepted delivery, and refunds unused escrow on close.
 The bundled `empic_payments` scenario demonstrates provider service
 registration, consumer acceptance policy, pull refunds, and pubsub
-overbilling protection.
+overbilling protection. Its adversarial validators also check consumer /
+provider / service binding by payment reference and reject traces that leak
+private keys, API keys, bearer tokens, wallet secrets, or other live rail
+secrets.
 
 ## Writing your own
 

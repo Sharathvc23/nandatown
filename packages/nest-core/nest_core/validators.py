@@ -1936,6 +1936,143 @@ def validate_empic_provider_service_binding(
     ]
 
 
+def validate_empic_payment_participant_binding(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """Payment refs must not change consumer, provider, service, or mode."""
+    audit = _empic_audit_events(events)
+    tracked_types = {
+        "empic_acceptance_policy",
+        "empic_escrow_debited",
+        "empic_stream_opened",
+        "empic_delivery_evaluated",
+        "empic_escrow_released",
+        "empic_escrow_refunded",
+        "empic_stream_closed",
+    }
+    context_by_ref: dict[str, dict[str, str]] = defaultdict(dict)
+    checked_refs: set[str] = set()
+    violations: list[str] = []
+
+    for ev in audit:
+        event_type = str(ev.get("event_type") or "")
+        if event_type not in tracked_types:
+            continue
+        ref = _empic_ref(ev)
+        if not ref:
+            violations.append(f"{event_type}: missing payment_ref")
+            continue
+        checked_refs.add(ref)
+
+        payer = _safe_text(ev.get("payer"))
+        consumer_id = _safe_text(ev.get("consumer_id"))
+        if payer and consumer_id and payer != consumer_id:
+            violations.append(f"{ref}: payer {payer} does not match consumer_id {consumer_id}")
+        if payer and not consumer_id:
+            consumer_id = payer
+        if consumer_id and not payer:
+            payer = consumer_id
+
+        observed = {
+            "service_id": _safe_text(ev.get("service_id")),
+            "payer": payer,
+            "consumer_id": consumer_id,
+            "provider": _safe_text(ev.get("provider")),
+            "mode": _safe_text(ev.get("mode")),
+        }
+        if event_type in {
+            "empic_acceptance_policy",
+            "empic_escrow_debited",
+            "empic_stream_opened",
+            "empic_escrow_released",
+            "empic_escrow_refunded",
+            "empic_stream_closed",
+        }:
+            missing = [field for field, value in observed.items() if not value]
+            if missing:
+                violations.append(f"{ref}: {event_type} missing {missing}")
+
+        context = context_by_ref[ref]
+        for field, value in observed.items():
+            if not value:
+                continue
+            existing = context.get(field)
+            if existing is not None and existing != value:
+                violations.append(f"{ref}: {field} changed from {existing} to {value}")
+            else:
+                context[field] = value
+
+    if violations:
+        return [
+            ValidationResult(
+                "empic_payment_participant_binding",
+                False,
+                "; ".join(violations),
+            )
+        ]
+    return [
+        ValidationResult(
+            "empic_payment_participant_binding",
+            True,
+            f"verified {len(checked_refs)} payment participant bindings",
+        )
+    ]
+
+
+_EMPIC_FORBIDDEN_SECRET_KEYS = {
+    "api_key",
+    "api_key_secret",
+    "bearer_token",
+    "coinbase_secret",
+    "password",
+    "private_key",
+    "secret",
+    "secret_key",
+    "service_api_key",
+    "stripe_secret_key",
+    "wallet_auth_token",
+    "wallet_secret",
+}
+
+
+def validate_empic_no_secret_material(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """EMPIC traces must contain only replay-safe public metadata."""
+    violations: list[str] = []
+    checked = 0
+
+    for ev in events:
+        if ev.get("kind") != "send":
+            continue
+        with contextlib.suppress(json.JSONDecodeError):
+            body_raw: object = json.loads(_message_body(ev))
+            if not isinstance(body_raw, dict):
+                continue
+            body = cast("dict[str, Any]", body_raw)
+            msg_type = str(body.get("type") or "")
+            if not msg_type.startswith("empic_"):
+                continue
+            checked += 1
+            violations.extend(_empic_secret_violations(body, path=msg_type))
+
+    if violations:
+        return [
+            ValidationResult(
+                "empic_no_secret_material",
+                False,
+                "; ".join(violations),
+            )
+        ]
+    return [
+        ValidationResult(
+            "empic_no_secret_material",
+            True,
+            f"checked {checked} EMPIC trace messages",
+        )
+    ]
+
+
 def validate_empic_no_drain_after_close(
     events: list[dict[str, Any]],
 ) -> list[ValidationResult]:
@@ -2046,6 +2183,12 @@ def _empic_policy_accepts(
         delivery.get("provider_id")
     ) != _safe_text(policy_event.get("provider")):
         return False, "provider_id mismatch"
+    if _policy_flag(policy, "bind_consumer_id"):
+        expected_consumer = _safe_text(policy_event.get("consumer_id")) or _safe_text(
+            policy_event.get("payer")
+        )
+        if _safe_text(delivery.get("consumer_id")) != expected_consumer:
+            return False, "consumer_id mismatch"
     if _policy_flag(policy, "bind_request_params"):
         expected_params = policy_event.get("request_params")
         if delivery.get("request_params") != expected_params:
@@ -2086,6 +2229,30 @@ def _empic_policy_accepts(
 def _policy_flag(policy: dict[str, Any], key: str) -> bool:
     value = policy.get(key, True)
     return value if isinstance(value, bool) else True
+
+
+def _empic_secret_violations(value: object, *, path: str) -> list[str]:
+    violations: list[str] = []
+    if isinstance(value, dict):
+        for key_raw, child in cast("dict[object, object]", value).items():
+            key = str(key_raw)
+            normalized = key.lower().replace("-", "_")
+            child_path = f"{path}.{key}"
+            if normalized in _EMPIC_FORBIDDEN_SECRET_KEYS or normalized.endswith("_secret"):
+                violations.append(f"{child_path}: forbidden secret field")
+            violations.extend(_empic_secret_violations(child, path=child_path))
+    elif isinstance(value, list):
+        for index, item in enumerate(cast("list[object]", value)):
+            violations.extend(_empic_secret_violations(item, path=f"{path}[{index}]"))
+    elif isinstance(value, str):
+        lowered = value.lower()
+        if "-----begin private key-----" in lowered:
+            violations.append(f"{path}: private key material")
+        elif lowered.startswith("bearer "):
+            violations.append(f"{path}: bearer token material")
+        elif value.startswith(("sk_live_", "sk_test_")):
+            violations.append(f"{path}: payment provider secret key material")
+    return violations
 
 
 def _safe_text(value: Any) -> str:
@@ -2618,6 +2785,8 @@ VALIDATORS: dict[str, list[Any]] = {
         validate_empic_all_escrows_terminal,
         validate_empic_no_duplicate_settlement,
         validate_empic_provider_service_binding,
+        validate_empic_payment_participant_binding,
+        validate_empic_no_secret_material,
         validate_empic_no_drain_after_close,
         validate_empic_no_overbill_on_partition,
     ],

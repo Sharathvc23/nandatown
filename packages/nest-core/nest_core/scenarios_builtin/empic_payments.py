@@ -74,6 +74,7 @@ def _evaluate_acceptance(
     policy: dict[str, Any],
     expected_service_id: ServiceRef,
     expected_provider: AgentId,
+    expected_consumer: AgentId,
     request_params: dict[str, Any],
     current_tick: int,
 ) -> tuple[bool, str]:
@@ -90,6 +91,10 @@ def _evaluate_acceptance(
         expected_provider
     ):
         return False, "provider_id mismatch"
+    if policy.get("bind_consumer_id", True) and delivery.get("consumer_id") != str(
+        expected_consumer
+    ):
+        return False, "consumer_id mismatch"
     if policy.get("bind_request_params", True) and delivery.get("request_params") != request_params:
         return False, "request_params mismatch"
 
@@ -237,6 +242,7 @@ class WeatherProviderAgent(StateMachineAgent):
         }
         provider_id = str(self._id)
         service_id = str(self._service_id)
+        consumer_id = str(request.get("consumer_id", ""))
 
         if self._behavior == "missing_field":
             data.pop("temperature_f")
@@ -246,6 +252,8 @@ class WeatherProviderAgent(StateMachineAgent):
         elif self._behavior == "wrong_provider":
             provider_id = "provider-spoof"
             service_id = f"{self._service_id}-spoof"
+        elif self._behavior == "wrong_consumer":
+            consumer_id = "consumer-spoof"
         elif self._behavior == "pubsub_mixed" and sequence == 2:
             data["temperature_c"] = 120.0
 
@@ -257,7 +265,7 @@ class WeatherProviderAgent(StateMachineAgent):
             "payment_ref": ref,
             "service_id": service_id,
             "provider_id": provider_id,
-            "consumer_id": str(request.get("consumer_id", "")),
+            "consumer_id": consumer_id,
             "delivery_mode": request.get("delivery_mode", "pull"),
             "request_params": request.get("request_params", {}),
             "data": data,
@@ -302,6 +310,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                 "payment_ref": str(self._ref),
                 "service_id": str(self._service_id),
                 "payer": str(self._id),
+                "consumer_id": str(self._id),
                 "provider": str(self._provider),
                 "mode": self._mode,
                 "request_params": self._request_params,
@@ -335,6 +344,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                     "payment_ref": str(self._ref),
                     "service_id": str(self._service_id),
                     "payer": str(self._id),
+                    "consumer_id": str(self._id),
                     "provider": str(self._provider),
                     "amount": quote.price.amount,
                     "mode": "pull",
@@ -360,6 +370,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                     "payment_ref": str(self._ref),
                     "service_id": str(self._service_id),
                     "payer": str(self._id),
+                    "consumer_id": str(self._id),
                     "provider": str(self._provider),
                     "amount": terms.max_total,
                     "rate_per_tick": terms.rate_per_tick,
@@ -375,6 +386,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                     "payment_ref": str(self._ref),
                     "service_id": str(self._service_id),
                     "payer": str(self._id),
+                    "consumer_id": str(self._id),
                     "provider": str(self._provider),
                     "amount": terms.max_total,
                     "mode": "pubsub",
@@ -425,6 +437,7 @@ class WeatherConsumerAgent(StateMachineAgent):
             policy=self._policy,
             expected_service_id=self._service_id,
             expected_provider=self._provider,
+            expected_consumer=self._id,
             request_params=self._request_params,
             current_tick=int(ctx.time),
         )
@@ -447,9 +460,12 @@ class WeatherConsumerAgent(StateMachineAgent):
                 "delivery_id": delivery_id,
                 "payment_ref": str(self._ref),
                 "service_id": str(self._service_id),
+                "payer": str(self._id),
+                "consumer_id": str(self._id),
                 "provider": str(self._provider),
                 "delivery_service_id": str(delivery.get("service_id", "")),
                 "delivery_provider_id": str(delivery.get("provider_id", "")),
+                "delivery_consumer_id": str(delivery.get("consumer_id", "")),
                 "request_params": delivery.get("request_params", {}),
                 "accepted": accepted,
                 "reason": reason,
@@ -470,6 +486,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                         "payment_ref": str(self._ref),
                         "service_id": str(self._service_id),
                         "payer": str(self._id),
+                        "consumer_id": str(self._id),
                         "provider": str(self._provider),
                         "amount": receipt.amount.amount,
                         "mode": "pull",
@@ -487,6 +504,8 @@ class WeatherConsumerAgent(StateMachineAgent):
                         "payment_ref": str(self._ref),
                         "service_id": str(self._service_id),
                         "payer": str(self._id),
+                        "consumer_id": str(self._id),
+                        "provider": str(self._provider),
                         "amount": refund_amount,
                         "reason": reason,
                         "mode": "pull",
@@ -509,6 +528,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                         "payment_ref": str(self._ref),
                         "service_id": str(self._service_id),
                         "payer": str(self._id),
+                        "consumer_id": str(self._id),
                         "provider": str(self._provider),
                         "amount": released,
                         "mode": "pubsub",
@@ -533,6 +553,8 @@ class WeatherConsumerAgent(StateMachineAgent):
                     "payment_ref": str(self._ref),
                     "service_id": str(self._service_id),
                     "payer": str(self._id),
+                    "consumer_id": str(self._id),
+                    "provider": str(self._provider),
                     "amount": refund_amount,
                     "reason": "stream closed",
                     "mode": "pubsub",
@@ -545,6 +567,7 @@ class WeatherConsumerAgent(StateMachineAgent):
                 "payment_ref": str(self._ref),
                 "service_id": str(self._service_id),
                 "payer": str(self._id),
+                "consumer_id": str(self._id),
                 "provider": str(self._provider),
                 "mode": "pubsub",
             },
@@ -578,6 +601,7 @@ def empic_payments_factory(
         "max_spend": 100,
         "bind_service_id": True,
         "bind_provider_id": True,
+        "bind_consumer_id": True,
         "bind_request_params": True,
     }
     raw_policy: object = config.task.config.get("acceptance_policy", {})
@@ -594,6 +618,7 @@ def empic_payments_factory(
         ("provider-2", "weather-pull-stale", "stale", ("pull",)),
         ("provider-3", "weather-pull-spoof", "wrong_provider", ("pull",)),
         ("provider-4", "weather-pubsub", "pubsub_mixed", ("pull", "pubsub")),
+        ("provider-5", "weather-pull-wrong-consumer", "wrong_consumer", ("pull",)),
     ]
     consumer_specs = [
         ("consumer-0", "provider-0", "weather-pull-good", "pull", max_spend),
@@ -601,6 +626,7 @@ def empic_payments_factory(
         ("consumer-2", "provider-2", "weather-pull-stale", "pull", max_spend),
         ("consumer-3", "provider-3", "weather-pull-spoof", "pull", max_spend),
         ("consumer-4", "provider-4", "weather-pubsub", "pubsub", max_spend),
+        ("consumer-5", "provider-5", "weather-pull-wrong-consumer", "pull", max_spend),
     ]
 
     agents: dict[AgentId, StateMachineAgent] = {}

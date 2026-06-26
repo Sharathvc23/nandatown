@@ -264,11 +264,12 @@ class TestEmpicPaymentsScenario:
         assert all(r.passed for r in validations), validations
 
         payments = runner.resolved_plugins["payments"]
-        assert len(payments._payments) == 5  # noqa: SLF001
+        assert len(payments._payments) == 6  # noqa: SLF001
         assert payments.balance(AgentId("empic-escrow")) == 0
         assert payments.balance(AgentId("provider-0")) > 1000
         assert payments.balance(AgentId("provider-1")) == 1000
         assert payments.balance(AgentId("provider-4")) > 1000
+        assert payments.balance(AgentId("provider-5")) == 1000
 
     @pytest.mark.asyncio
     async def test_empic_payments_partition_yaml(self, tmp_path: Path) -> None:

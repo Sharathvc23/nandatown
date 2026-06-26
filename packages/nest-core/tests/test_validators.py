@@ -25,6 +25,8 @@ from nest_core.validators import (
     validate_empic_no_duplicate_settlement,
     validate_empic_no_overbill_on_partition,
     validate_empic_no_release_without_accepted_delivery,
+    validate_empic_no_secret_material,
+    validate_empic_payment_participant_binding,
     validate_empic_provider_service_binding,
     validate_empic_pubsub_billing_caps,
     validate_events,
@@ -85,6 +87,7 @@ def _empic_weather_policy() -> dict[str, Any]:
         "max_age_ticks": 3,
         "bind_service_id": True,
         "bind_provider_id": True,
+        "bind_consumer_id": True,
         "bind_request_params": True,
     }
 
@@ -913,6 +916,8 @@ class TestEmpicPaymentsValidators:
                     "event_type": "empic_acceptance_policy",
                     "payment_ref": "p1",
                     "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
                     "provider": "provider",
                     "request_params": request_params,
                     "policy": _empic_weather_policy(),
@@ -924,6 +929,7 @@ class TestEmpicPaymentsValidators:
                     "delivery_id": "d1",
                     "service_id": "weather",
                     "provider_id": "provider",
+                    "consumer_id": "consumer",
                     "request_params": request_params,
                     "data": {
                         "temperature_c": 21.0,
@@ -959,6 +965,8 @@ class TestEmpicPaymentsValidators:
                     "event_type": "empic_acceptance_policy",
                     "payment_ref": "p1",
                     "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
                     "provider": "provider",
                     "request_params": request_params,
                     "policy": _empic_weather_policy(),
@@ -970,6 +978,7 @@ class TestEmpicPaymentsValidators:
                     "delivery_id": "d1",
                     "service_id": "weather",
                     "provider_id": "provider",
+                    "consumer_id": "consumer",
                     "request_params": request_params,
                     "data": {
                         "temperature_c": 120.0,
@@ -1006,6 +1015,8 @@ class TestEmpicPaymentsValidators:
                     "event_type": "empic_acceptance_policy",
                     "payment_ref": "p1",
                     "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
                     "provider": "provider",
                     "request_params": request_params,
                     "policy": _empic_weather_policy(),
@@ -1017,6 +1028,7 @@ class TestEmpicPaymentsValidators:
                     "delivery_id": "d1",
                     "service_id": "weather-spoof",
                     "provider_id": "provider-spoof",
+                    "consumer_id": "consumer",
                     "request_params": {"lat": 0, "lon": 0},
                     "data": {
                         "temperature_c": 21.0,
@@ -1043,6 +1055,56 @@ class TestEmpicPaymentsValidators:
         assert len(results) == 1
         assert not results[0].passed
         assert "mismatch" in results[0].detail
+
+    def test_delivery_policy_integrity_fails_wrong_consumer_replay(self) -> None:
+        """A valid payload for the wrong consumer cannot release escrow."""
+        request_params = {"lat": 42.3601, "lon": -71.0942}
+        events = [
+            _empic(
+                {
+                    "event_type": "empic_acceptance_policy",
+                    "payment_ref": "p1",
+                    "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
+                    "provider": "provider",
+                    "request_params": request_params,
+                    "policy": _empic_weather_policy(),
+                }
+            ),
+            _empic_delivery(
+                {
+                    "payment_ref": "p1",
+                    "delivery_id": "d1",
+                    "service_id": "weather",
+                    "provider_id": "provider",
+                    "consumer_id": "consumer-spoof",
+                    "request_params": request_params,
+                    "data": {
+                        "temperature_c": 21.0,
+                        "temperature_f": 69.8,
+                        "windspeed_kmh": 8.0,
+                        "timestamp": "tick-1",
+                        "tick": 1,
+                    },
+                },
+                tick=1,
+            ),
+            _empic(
+                {
+                    "event_type": "empic_delivery_evaluated",
+                    "payment_ref": "p1",
+                    "delivery_id": "d1",
+                    "accepted": True,
+                },
+                tick=1,
+            ),
+        ]
+
+        results = validate_empic_delivery_policy_integrity(events)
+        assert len(results) == 1
+        assert not results[0].passed
+        assert "consumer_id mismatch" in results[0].detail
 
     def test_pubsub_billing_caps_pass(self) -> None:
         """Pubsub release is capped by accepted delivery count and stream terms."""
@@ -1387,6 +1449,136 @@ class TestEmpicPaymentsValidators:
         assert len(results) == 1
         assert not results[0].passed
         assert "was not registered" in results[0].detail
+
+    def test_payment_participant_binding_passes(self) -> None:
+        """Lifecycle events keep the same payer, consumer, provider, service, and mode."""
+        events = [
+            _empic(
+                {
+                    "event_type": "empic_acceptance_policy",
+                    "payment_ref": "p1",
+                    "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
+                    "provider": "provider",
+                    "mode": "pull",
+                }
+            ),
+            _empic(
+                {
+                    "event_type": "empic_escrow_debited",
+                    "payment_ref": "p1",
+                    "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
+                    "provider": "provider",
+                    "mode": "pull",
+                    "amount": 50,
+                }
+            ),
+            _empic(
+                {
+                    "event_type": "empic_delivery_evaluated",
+                    "payment_ref": "p1",
+                    "delivery_id": "d1",
+                    "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
+                    "provider": "provider",
+                    "mode": "pull",
+                    "accepted": True,
+                }
+            ),
+            _empic(
+                {
+                    "event_type": "empic_escrow_released",
+                    "payment_ref": "p1",
+                    "delivery_id": "d1",
+                    "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
+                    "provider": "provider",
+                    "mode": "pull",
+                    "amount": 50,
+                }
+            ),
+        ]
+
+        results = validate_empic_payment_participant_binding(events)
+        assert len(results) == 1
+        assert results[0].passed
+
+    def test_payment_participant_binding_fails_rebound_ref(self) -> None:
+        """A payment ref cannot switch consumer/provider/service identity."""
+        events = [
+            _empic(
+                {
+                    "event_type": "empic_escrow_debited",
+                    "payment_ref": "p1",
+                    "service_id": "weather",
+                    "payer": "consumer",
+                    "consumer_id": "consumer",
+                    "provider": "provider",
+                    "mode": "pull",
+                    "amount": 50,
+                }
+            ),
+            _empic(
+                {
+                    "event_type": "empic_escrow_released",
+                    "payment_ref": "p1",
+                    "delivery_id": "d1",
+                    "service_id": "weather",
+                    "payer": "attacker",
+                    "consumer_id": "attacker",
+                    "provider": "provider",
+                    "mode": "pull",
+                    "amount": 50,
+                }
+            ),
+        ]
+
+        results = validate_empic_payment_participant_binding(events)
+        assert len(results) == 1
+        assert not results[0].passed
+        assert "payer changed" in results[0].detail
+        assert "consumer_id changed" in results[0].detail
+
+    def test_no_secret_material_passes_public_metadata(self) -> None:
+        """Public wallet-style metadata can appear in traces."""
+        events = [
+            _empic(
+                {
+                    "event_type": "empic_service_registered",
+                    "service_id": "weather",
+                    "provider": "provider",
+                    "wallet_address": "0x00000000000000000000000000000000000000aa",
+                    "did": "did:empic:test",
+                }
+            )
+        ]
+
+        results = validate_empic_no_secret_material(events)
+        assert len(results) == 1
+        assert results[0].passed
+
+    def test_no_secret_material_fails_private_key(self) -> None:
+        """Trace messages must not leak private keys or API secrets."""
+        events = [
+            _empic(
+                {
+                    "event_type": "empic_service_registered",
+                    "service_id": "weather",
+                    "provider": "provider",
+                    "private_key": "-----BEGIN PRIVATE KEY-----\nredacted",
+                }
+            )
+        ]
+
+        results = validate_empic_no_secret_material(events)
+        assert len(results) == 1
+        assert not results[0].passed
+        assert "private_key" in results[0].detail
 
     def test_no_drain_after_close_fails(self) -> None:
         """Pubsub release after stream close is an attack."""
