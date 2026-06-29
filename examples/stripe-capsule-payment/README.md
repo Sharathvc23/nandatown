@@ -1,6 +1,18 @@
-# Payments layer: `stripe_capsule`
+# Payments demo: `stripe_capsule`
 
-Wrap the NANDA `Payments` layer so every completed payment is sealed in an
+> **Demo** — `StripeCapsuledPayments` is a standalone demo, not a
+> conforming NANDA Payments protocol implementation.  The protocol requires
+> `pay(to, amount, ref) -> Receipt`; this plugin uses a different signature
+> and its `quote`/`verify_payment`/`refund` methods diverge from the
+> protocol contract.  `@runtime_checkable` only checks method *names*, so
+> an `isinstance` check will falsely pass.
+>
+> **Payee caveat (real-Stripe path):** the PaymentIntent is created without
+> a `destination` or `transfer_data` parameter, so `payee` is **not
+> enforced at the Stripe level** — the capsule commits to the payer/payee
+> pair by digest, but the charge does not route to the payee.
+
+Wrap a Stripe call so every completed payment is sealed in an
 [Agent Action Capsule][]. The capsule records the Stripe `payment_intent_id`,
 amount, currency, and outcome — independently verifiable by any third party
 without replaying the transaction.

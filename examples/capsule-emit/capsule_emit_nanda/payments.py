@@ -1,5 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
-"""StripeCapsuledPayments — NANDA Payments layer: Stripe + sealed capsule.
+"""StripeCapsuledPayments — standalone demo: Stripe + sealed capsule.
+
+**Demo only** — this is *not* a conforming NANDA Payments protocol
+implementation.  The NANDA Payments protocol requires ``pay(to, amount,
+ref) -> Receipt``; this class uses a different signature and its
+``quote``/``verify_payment``/``refund`` methods diverge from the protocol
+contract.  ``@runtime_checkable`` only checks method *names*, so an
+``isinstance`` check against the Payments Protocol will falsely pass.
+
+**Payee caveat (real-Stripe path):** the PaymentIntent is created without a
+``destination`` or ``transfer_data`` parameter, so the payee named in the
+capsule is **not enforced at the Stripe level** — the capsule commits to
+the payer/payee pair by digest, but the charge itself does not route to
+the payee.
 
 Every completed payment is sealed in an Agent Action Capsule whose
 ``agent_input_digest`` commits to amount, payer, and payee at the moment
@@ -11,7 +24,7 @@ proof the amount was altered after the payment.
 runs a deterministic sandbox that mirrors the real Stripe API shape so
 capsule and verifier logic are identical without any real charges.
 
-Usage in a scenario YAML::
+Usage in a demo YAML::
 
     layers:
       payments: stripe_capsule
@@ -37,7 +50,11 @@ _USE_REAL_STRIPE = bool(_STRIPE_KEY)
 
 
 class StripeCapsuledPayments:
-    """NANDA Payments plugin: Stripe (or sandbox) + sealed Agent Action Capsule.
+    """Demo: Stripe (or sandbox) payments + sealed Agent Action Capsule.
+
+    This is a standalone demo plugin, not a conforming NANDA Payments layer.
+    See module docstring for the protocol-conformance and payee-enforcement
+    caveats before using in production.
 
     Args:
         anchor: Whether to anchor capsules to the public log (default False).
@@ -124,7 +141,7 @@ def _real_stripe_pay(payer: AgentId, payee: AgentId, amount: float, currency: st
         )
     stripe.api_key = _STRIPE_KEY
     intent = stripe.PaymentIntent.create(
-        amount=int(amount * 100),
+        amount=round(amount * 100),
         currency=currency,
         confirm=True,
         automatic_payment_methods={"enabled": True, "allow_redirects": "never"},

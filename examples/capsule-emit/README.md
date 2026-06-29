@@ -7,7 +7,7 @@ by any third party without replaying the scenario.
 | Layer | Plugin name | What it adds |
 |-------|-------------|--------------|
 | `trust` | `capsule_emit` | Drop-in for `agent_receipts`; seals every receipt to a capsule ledger. Ring-severance identical; adds third-party auditability. |
-| `payments` | `stripe_capsule` | Stripe (or sandbox) payments; every payment sealed with `agent_input_digest` committing to amount + payer/payee at call time. |
+| `payments` | `stripe_capsule` | **Demo** — Stripe (or sandbox) payments; every payment sealed with `agent_input_digest` committing to amount + payer/payee at call time.  Not a conforming NANDA Payments layer (see [`stripe-capsule-payment/README.md`](../stripe-capsule-payment/)). |
 
 ## Install
 

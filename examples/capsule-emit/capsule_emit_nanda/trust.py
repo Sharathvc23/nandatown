@@ -37,7 +37,6 @@ import capsule_emit
 from nest_core.types import AgentId, Attestation, Claim, Evidence, ReputationScore
 
 # Private helpers from nest-plugins-reference — couples to NANDA internals.
-# Sentinel test: tests/test_plugins.py::test_private_import_still_works
 try:
     from nest_plugins_reference.trust.agent_receipts import (
         NORMALIZATION_K,
