@@ -2,7 +2,7 @@
 [project]
 name = "nest-plugins-reference"
 version = "0.1.1"
-description = "Nanda Town reference plugins: default implementations for all 12 layers"
+description = "Nanda Town reference plugins: default implementations for the core layers"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -35,6 +35,10 @@ Repository = "https://github.com/projnanda/nandatown"
 # install-time discovery path described in CONTRIBUTING.md.
 [project.entry-points."nest.plugins.memory"]
 lww_register = "nest_plugins_reference.memory.lww_register:LwwRegisterMemory"
+
+[project.entry-points."nest.plugins.failure_detector"]
+heartbeat = "nest_plugins_reference.failure_detection.heartbeat:HeartbeatFailureDetector"
+phi_accrual = "nest_plugins_reference.failure_detection.phi_accrual:PhiAccrualFailureDetector"
 
 [build-system]
 requires = ["hatchling"]
