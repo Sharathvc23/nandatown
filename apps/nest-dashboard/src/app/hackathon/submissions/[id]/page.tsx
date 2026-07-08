@@ -18,14 +18,10 @@ import {
   SCORE_TOTAL_MAX,
   type ScoreDimension,
 } from "@/lib/hackathon";
-import { AuthorBadge } from "@/components/hackathon-card";
+import { AuthorBadge, StatusBadge } from "@/components/hackathon-card";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
-export async function generateStaticParams() {
-  const data = await loadDataset();
-  return data.submissions.map((s) => ({ id: s.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -113,6 +109,7 @@ export default async function SubmissionPage({
           <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr] lg:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-6">
+                <StatusBadge submission={sub} />
                 <AuthorBadge submission={sub} />
                 <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
                   PR #{sub.pr_number}
@@ -159,24 +156,28 @@ export default async function SubmissionPage({
               </div>
               <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
                 <div>
-                  <dt>Lines added</dt>
-                  <dd className="mt-1 font-display text-[1.15rem] leading-none text-ink-900 tabular-nums">
-                    +{formatLinesAdded(sub.additions ?? 0)}
+                  <dt>Status</dt>
+                  <dd className="mt-1 font-display text-[1.15rem] leading-none text-ink-900">
+                    {sub.state === "merged" ? "Merged" : "In review"}
                   </dd>
                 </div>
                 <div>
-                  <dt>Lines removed</dt>
+                  <dt>{sub.state === "merged" ? "Merged on" : "Opened on"}</dt>
                   <dd className="mt-1 font-display text-[1.15rem] leading-none text-ink-900 tabular-nums">
-                    −{formatLinesAdded(sub.deletions ?? 0)}
+                    {new Date(
+                      (sub.state === "merged" && sub.merged_at) || sub.created_at,
+                    ).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </dd>
                 </div>
-                <div>
-                  <dt>Files</dt>
-                  <dd className="mt-1 font-display text-[1.15rem] leading-none text-ink-900 tabular-nums">
-                    {sub.changed_files ?? 0}
-                  </dd>
-                </div>
-                <div>
+                {sub.additions !== null && (
+                  <div>
+                    <dt>Lines added</dt>
+                    <dd className="mt-1 font-display text-[1.15rem] leading-none text-ink-900 tabular-nums">
+                      +{formatLinesAdded(sub.additions)}
+                    </dd>
+                  </div>
+                )}
+                <div className={sub.additions !== null ? "" : "col-span-2"}>
                   <dt>Branch</dt>
                   <dd className="mt-1 text-[0.78rem] text-ink-500 truncate normal-case tracking-normal font-mono">
                     {sub.branch}
@@ -272,10 +273,13 @@ export default async function SubmissionPage({
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
                 Checkout locally
               </p>
+              {/* Fetch by the numeric PR ref, never the raw branch name — on a
+                  public repo the branch is attacker-controlled and would make
+                  this copy-paste snippet a shell-injection vector. */}
               <code className="mt-3 block font-mono text-[0.78rem] text-ink-700 break-all">
-                git fetch origin {sub.branch}
+                git fetch origin pull/{sub.pr_number}/head:pr-{sub.pr_number}
                 <br />
-                git checkout {sub.branch}
+                git checkout pr-{sub.pr_number}
               </code>
             </div>
           </div>

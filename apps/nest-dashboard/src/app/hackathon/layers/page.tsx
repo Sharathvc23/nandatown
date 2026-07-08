@@ -8,7 +8,10 @@
 import Link from "next/link";
 import { formatScore, loadDataset } from "@/lib/hackathon";
 
-export const revalidate = 300;
+// Render at request time; the GitHub data layer is cached by
+// unstable_cache, so this never re-fetches per request but also never bakes
+// an empty snapshot at build time when GitHub is unreachable.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Hackathon layers — Nanda Town",
@@ -39,9 +42,10 @@ export default async function HackathonLayersPage() {
               <span className="italic text-ink-700">One stack.</span>
             </h1>
             <p className="animate-fade-in stagger-2 text-[1.05rem] leading-[1.6] text-ink-500 max-w-md">
-              Every Nanda Town scenario picks one plugin per layer. The grid below
-              shows which layers have hackathon submissions and which are
-              still open. Click any layer to see its entries.
+              Every Nanda Town scenario picks one plugin per layer. The grid
+              below syncs live from GitHub — merged and in-review PRs land in
+              their layer automatically, and builds beyond the twelve layers
+              collect under Other. Click any layer to see its entries.
             </p>
           </div>
         </div>
@@ -58,7 +62,7 @@ export default async function HackathonLayersPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 tabular-nums">
-                    {String(idx + 1).padStart(2, "0")}
+                    {layer.key === "other" ? "＋" : String(idx + 1).padStart(2, "0")}
                   </span>
                   {layer.is_open ? (
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-[0.18em] border border-dashed border-cream-400 text-ink-400">

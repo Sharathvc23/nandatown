@@ -10,14 +10,8 @@ import { notFound } from "next/navigation";
 import { loadDataset, submissionsForLayer } from "@/lib/hackathon";
 import { LayerSubmissions } from "./layer-submissions";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
-export async function generateStaticParams() {
-  // Pre-render every known layer at build time. Other slugs fall
-  // through to the dynamic path and 404 on first request.
-  const data = await loadDataset();
-  return data.layers.map((layer) => ({ layer: layer.key }));
-}
 
 export default async function LayerPage({
   params,

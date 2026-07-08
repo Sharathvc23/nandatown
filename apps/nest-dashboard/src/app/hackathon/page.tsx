@@ -8,13 +8,16 @@
  */
 
 import Link from "next/link";
-import { formatLinesAdded, loadDataset } from "@/lib/hackathon";
+import { loadDataset } from "@/lib/hackathon";
 import { EmptyState, SubmissionCard } from "@/components/hackathon-card";
 import { HackathonFaq } from "@/components/hackathon-faq";
 import { HackathonPhases } from "@/components/hackathon-phases";
 import { hackathonEvent, hackathonFaqs } from "@/lib/hackathon-event";
 
-export const revalidate = 300;
+// Render at request time; the GitHub data layer is cached by
+// unstable_cache, so this never re-fetches per request but also never bakes
+// an empty snapshot at build time when GitHub is unreachable.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "NandaHack — Nanda Town",
@@ -48,15 +51,15 @@ function Stat({
 
 export default async function HackathonLandingPage() {
   const data = await loadDataset();
-  const featured = data.submissions
-    .slice()
-    .sort((a, b) => {
-      const sa = a.score?.total ?? -1;
-      const sb = b.score?.total ?? -1;
-      if (sa !== sb) return sb - sa;
-      return (b.additions ?? 0) - (a.additions ?? 0);
-    })
-    .slice(0, 3);
+  // Feature the freshest merges; if fewer than three PRs have merged,
+  // round out the row with the newest submissions still in review.
+  const merged = data.submissions
+    .filter((s) => s.state === "merged")
+    .sort((a, b) => (b.merged_at ?? "").localeCompare(a.merged_at ?? ""));
+  const featured = [
+    ...merged,
+    ...data.submissions.filter((s) => s.state !== "merged"),
+  ].slice(0, 3);
 
   return (
     <div className="bg-cream-100">
@@ -77,10 +80,10 @@ export default async function HackathonLandingPage() {
 
             <div className="animate-fade-in stagger-2 lg:pt-6 max-w-md">
               <p className="text-[1.1rem] leading-[1.6] text-ink-500">
-                Every plugin and protocol pitched at NandaHack, with
-                the author behind it, the layer it touches, and a judge score
-                you can argue with. Open PRs only &mdash; nothing here is
-                merged yet.
+                Every plugin and protocol built at NandaHack, with the author
+                behind it and the layer it touches &mdash; synced straight
+                from GitHub, so merged PRs land here in their layer the
+                moment they merge.
               </p>
               <p className="mt-4 text-[1.05rem] leading-[1.6] text-ink-700">
                 <strong className="font-semibold">Fully virtual</strong>
@@ -94,14 +97,6 @@ export default async function HackathonLandingPage() {
             <Link href="/hackathon/layers" className="btn-primary">
               Browse by layer
             </Link>
-            <a
-              href={hackathonEvent.lumaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary"
-            >
-              Info session &middot; Jul 7 on Luma
-            </a>
             <a
               href={hackathonEvent.officialUrl}
               target="_blank"
@@ -138,7 +133,7 @@ export default async function HackathonLandingPage() {
           <Stat
             label="Submissions"
             value={String(data.stats.total_submissions)}
-            hint="across all 12 layers"
+            hint="open + merged PRs"
           />
           <Stat
             label="Participants"
@@ -146,14 +141,14 @@ export default async function HackathonLandingPage() {
             hint="unique handles"
           />
           <Stat
+            label="Merged"
+            value={String(data.stats.total_merged)}
+            hint="PRs merged into the repo"
+          />
+          <Stat
             label="Layers covered"
             value={`${data.stats.layers_covered}/${data.stats.layers_total}`}
             hint="layers with at least one PR"
-          />
-          <Stat
-            label="Lines added"
-            value={formatLinesAdded(data.stats.total_lines_added)}
-            hint={`${data.stats.total_files_changed} files touched`}
           />
         </div>
       </section>
@@ -169,27 +164,14 @@ export default async function HackathonLandingPage() {
                 <span className="italic text-ink-700">demo</span> in Boston.
               </h2>
             </div>
-            <a
-              href={hackathonEvent.lumaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex font-mono text-[11px] uppercase tracking-[0.18em] text-ink-500 hover:text-ink-900"
-            >
-              Register on Luma →
-            </a>
           </div>
 
-          <div className="grid gap-px bg-cream-400/40 border border-cream-400/40 rounded-2xl overflow-hidden sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-px bg-cream-400/40 border border-cream-400/40 rounded-2xl overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
                 label: "Virtual hackathon",
                 date: hackathonEvent.virtualWindow,
                 body: "Build agentic AI apps in the Nanda Town sandbox from anywhere. No Luma registration needed to participate virtually.",
-              },
-              {
-                label: "Info session",
-                date: "Mon, July 7",
-                body: "Virtual webinar: format, participation options, requirements, judging criteria, and how to get started. Register on Luma.",
               },
               {
                 label: "Submissions due",
@@ -225,8 +207,8 @@ export default async function HackathonLandingPage() {
             <div>
               <p className="eyebrow">Featured submissions</p>
               <h2 className="mt-4 font-display text-[2rem] leading-[1.1] text-ink-900">
-                Top of the<br />
-                <span className="italic text-ink-700">stack</span>.
+                Fresh off the<br />
+                <span className="italic text-ink-700">merge</span>.
               </h2>
             </div>
             <Link
@@ -240,7 +222,7 @@ export default async function HackathonLandingPage() {
           {featured.length === 0 ? (
             <EmptyState
               title="No submissions yet."
-              body="GitHub couldn't be reached when the dataset was last built, or no hackathon/* PRs are open. Try again in five minutes."
+              body="GitHub couldn't be reached just now, or no hackathon/* PRs are open. This page syncs automatically — check back in a few minutes."
             />
           ) : (
             <div className="grid gap-5 lg:grid-cols-3">
@@ -301,16 +283,7 @@ export default async function HackathonLandingPage() {
             </h2>
             <p className="mt-5 max-w-xs text-[0.95rem] leading-[1.6] text-ink-500">
               The short version: yes, your team can do the whole thing
-              virtually. Details below, and in the{" "}
-              <a
-                href={hackathonEvent.lumaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-4 decoration-cream-400 hover:text-ink-900"
-              >
-                July 7 info session
-              </a>
-              .
+              virtually. Details below.
             </p>
           </div>
           <HackathonFaq entries={hackathonFaqs} />
