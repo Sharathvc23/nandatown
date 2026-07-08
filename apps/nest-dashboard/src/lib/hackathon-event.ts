@@ -1,21 +1,18 @@
 /**
  * Single source of truth for NandaHack event details.
  *
- * Cross-listed from the Luma info-session page (https://luma.com/a98t3dze)
- * and the official hackathon site. Update dates here and every page —
- * banner, homepage, hackathon page, footer — picks them up.
+ * Cross-listed from the official hackathon site. Update dates here and
+ * every page — banner, homepage, hackathon page, footer — picks them up.
  */
 
 export const hackathonEvent = {
   name: "NandaHack",
   tagline: "An agentic AI hackathon by Project NANDA, HCLTech, and MIT Media Lab.",
-  lumaUrl: "https://luma.com/a98t3dze",
   officialUrl: "https://nandahack.media.mit.edu",
   repoUrl: "https://github.com/projnanda/nandatown",
   githubPRsUrl: "https://github.com/projnanda/nandatown/pulls",
   virtualWindow: "June 7 – July 10",
   submissionDeadline: "Friday, July 10 · 12:00 PM ET",
-  infoSession: "Monday, July 7 · virtual webinar",
   finale: "Saturday, July 11 · MIT Media Lab, Boston",
 } as const;
 
@@ -36,11 +33,6 @@ export const hackathonFaqs: FaqEntry[] = [
     question: "Do I have to come to MIT for the finale?",
     answer:
       "No. The Nanda Summit & finale on Saturday, July 11 at MIT Media Lab is optional, and attendance does not affect your score. There's no coding or building at the in-person event — only demos and meeting other builders.",
-  },
-  {
-    question: "What happens at the July 7 info session?",
-    answer:
-      "A free virtual webinar covering the hackathon format, participation options, project requirements, judging criteria, the timeline, and how to get started. Register on Luma to join.",
   },
   {
     question: "What do teams build?",
