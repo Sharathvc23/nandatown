@@ -102,6 +102,22 @@ export function decodeStateCookie(
   }
 }
 
+/**
+ * CSRF backstop for state-changing POSTs. Compares the Origin header against
+ * the configured public origin (APP_BASE_URL) and the raw Host header —
+ * NOT req.nextUrl, which reflects the container's internal address behind
+ * the reverse proxy.
+ */
+export function sameOrigin(originHeader: string | null, hostHeader: string | null): boolean {
+  if (!originHeader) return true;
+  try {
+    const host = new URL(originHeader).host;
+    return host === new URL(baseUrl()).host || (!!hostHeader && host === hostHeader);
+  } catch {
+    return false;
+  }
+}
+
 /** Same-site absolute paths only — no "//evil.com", no full URLs. */
 export function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) {

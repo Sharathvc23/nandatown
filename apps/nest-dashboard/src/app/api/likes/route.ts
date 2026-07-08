@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE, decodeSession } from "@/lib/auth";
+import { SESSION_COOKIE, decodeSession, sameOrigin } from "@/lib/auth";
 import { likeSkill, listAllLikes, listLikers, unlikeSkill } from "@/lib/likes";
 
 export const dynamic = "force-dynamic";
@@ -52,15 +52,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Same-origin check on top of the SameSite=Lax cookie.
-  const origin = req.headers.get("origin");
-  if (origin) {
-    try {
-      if (new URL(origin).host !== req.nextUrl.host) {
-        return NextResponse.json({ error: "Bad origin" }, { status: 403 });
-      }
-    } catch {
-      return NextResponse.json({ error: "Bad origin" }, { status: 403 });
-    }
+  if (!sameOrigin(req.headers.get("origin"), req.headers.get("host"))) {
+    return NextResponse.json({ error: "Bad origin" }, { status: 403 });
   }
 
   if (throttled(user.sub)) {
