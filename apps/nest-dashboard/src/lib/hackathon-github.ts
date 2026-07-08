@@ -136,15 +136,27 @@ export function extractHandleAndTheme(
   return { handle: rest.slice(0, dash), theme: rest.slice(dash + 1) || null };
 }
 
+// The plural "comms" is matched only against the title/body, never the branch
+// slug: a stale slug like "versioned-comms" on an auth PR (PR #104) would
+// otherwise hijack the layer, while a real comms PR still surfaces via its
+// title (PR #18, a merged "versioned comms layer").
+const COMMS_PLURAL = /\bcomms\b/;
+
 export function classifyLayer(
   theme: string | null,
   title = "",
   body = "",
 ): LayerKey {
-  for (const source of [theme ?? "", title.toLowerCase(), body.toLowerCase()]) {
-    if (!source) continue;
+  const sources: Array<{ text: string; commsPlural: boolean }> = [
+    { text: theme ?? "", commsPlural: false },
+    { text: title.toLowerCase(), commsPlural: true },
+    { text: body.toLowerCase(), commsPlural: true },
+  ];
+  for (const { text, commsPlural } of sources) {
+    if (!text) continue;
+    if (commsPlural && COMMS_PLURAL.test(text)) return "communication";
     for (const [pattern, layer] of THEME_TO_LAYER) {
-      if (pattern.test(source)) return layer;
+      if (pattern.test(text)) return layer;
     }
   }
   return "other";
