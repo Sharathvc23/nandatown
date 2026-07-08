@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { listSkills, type Skill } from "@/lib/skills";
+import { getSessionUser } from "@/lib/auth";
+import { listAllLikes, type SkillLikeSummary } from "@/lib/likes";
 import { HackathonPhases } from "@/components/hackathon-phases";
+import { AuthChip } from "./auth-chip";
 import { CodeBlock } from "./code-block";
+import { LikeButton } from "./like-button";
 import { SubmitForm } from "./submit-form";
 
 export const dynamic = "force-dynamic";
@@ -102,8 +106,32 @@ const API_POST = `curl -X POST https://nandatown.projectnanda.org/api/skills \\
 /*  Page                                                               */
 /* ================================================================== */
 
-export default async function SkillsPage() {
-  const skills = await listSkills();
+/**
+ * The OAuth callbacks only ever redirect with these short codes; anything
+ * else in the query string is ignored so nobody can craft a link that puts
+ * their own words in our error banner.
+ */
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  not_configured: "Sign-in isn't configured on this server yet.",
+  interrupted: "Sign-in was interrupted. Please try again.",
+  rejected: "The sign-in provider rejected the request. Please try again.",
+  no_identity: "The sign-in provider didn't return an identity. Please try again.",
+};
+
+export default async function SkillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ auth_error?: string }>;
+}) {
+  const [skills, likes, viewer, params] = await Promise.all([
+    listSkills(),
+    listAllLikes(),
+    getSessionUser(),
+    searchParams,
+  ]);
+  const authError = params.auth_error
+    ? AUTH_ERROR_MESSAGES[params.auth_error]
+    : undefined;
 
   return (
     <div className="bg-cream-100">
@@ -299,6 +327,25 @@ export default async function SkillsPage() {
           eyebrow="The registry"
           title={`Submitted so far${skills.length ? ` · ${skills.length}` : ""}`}
         >
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cream-400/70 bg-cream-50 px-5 py-4">
+            <p className="max-w-sm text-[0.9rem] leading-[1.5] text-ink-500">
+              <span className="font-semibold text-ink-700">Audience Choice:</span>{" "}
+              heart your favorite submissions. Anyone can see the votes and who
+              cast them; liking needs a quick sign-in so it stays bot-free.
+            </p>
+            <AuthChip
+              viewer={
+                viewer
+                  ? { name: viewer.name, avatar: viewer.avatar, provider: viewer.provider }
+                  : null
+              }
+            />
+          </div>
+          {authError && (
+            <div className="mb-6 rounded-2xl border border-rust/40 bg-rust/10 px-5 py-3 text-[0.9rem] text-rust">
+              {authError}
+            </div>
+          )}
           {skills.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-cream-400 bg-cream-50 p-10 text-center">
               <p className="text-[1rem] text-ink-500">
@@ -308,7 +355,12 @@ export default async function SkillsPage() {
           ) : (
             <div className="space-y-4">
               {skills.map((skill) => (
-                <SkillCard key={skill.id} skill={skill} />
+                <SkillCard
+                  key={skill.id}
+                  skill={skill}
+                  likes={likes[skill.id]}
+                  viewer={viewer ? { sub: viewer.sub, name: viewer.name, avatar: viewer.avatar } : null}
+                />
               ))}
             </div>
           )}
@@ -322,12 +374,23 @@ export default async function SkillsPage() {
 /*  Submission card                                                    */
 /* ------------------------------------------------------------------ */
 
-function SkillCard({ skill }: { skill: Skill }) {
+function SkillCard({
+  skill,
+  likes,
+  viewer,
+}: {
+  skill: Skill;
+  likes: SkillLikeSummary | undefined;
+  viewer: { sub: string; name: string; avatar: string | null } | null;
+}) {
   const tags = (skill.tags ?? "")
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
   const showReach = skill.source_type === "url" || skill.source_type === "github";
+  // Strip provider subs before anything crosses to the client component.
+  const likers = (likes?.likers ?? []).map(({ name, avatar }) => ({ name, avatar }));
+  const viewerLiked = viewer ? (likes?.subs ?? []).includes(viewer.sub) : false;
 
   return (
     <div className="rounded-2xl border border-cream-400/70 bg-cream-50 p-6 transition-colors hover:border-ink-300">
@@ -340,9 +403,18 @@ function SkillCard({ skill }: { skill: Skill }) {
             <p className="mt-1 text-[0.85rem] text-ink-400">by {skill.author}</p>
           )}
         </div>
-        <span className="shrink-0 rounded-full border border-cream-400 bg-cream-200 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
-          {TYPE_LABEL[skill.source_type]}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className="rounded-full border border-cream-400 bg-cream-200 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
+            {TYPE_LABEL[skill.source_type]}
+          </span>
+          <LikeButton
+            skillId={skill.id}
+            initialCount={likes?.count ?? 0}
+            initialLikers={likers}
+            initiallyLiked={viewerLiked}
+            viewer={viewer ? { name: viewer.name, avatar: viewer.avatar } : null}
+          />
+        </div>
       </div>
 
       {skill.description && (
