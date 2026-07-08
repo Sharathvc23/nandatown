@@ -3038,6 +3038,216 @@ def validate_receipt_reputation_honest_confidence(
 
 
 # ---------------------------------------------------------------------------
+# Rogue-trusted-agent (pre-action permit gate) validators
+#
+# The rogue_trusted_agent scenario broadcasts ``:``-delimited lines (see
+# nest_core.scenarios_builtin.rogue_trusted_agent). A veteran with a strong
+# in-policy record makes one out-of-policy attempt; the trace self-declares it
+# with a ``rogue_attempt:`` line so these validators need no policy table. Under
+# a plugin with a pre-action gate the attempt is refused (``permit:...:denied``
+# + ``blocked:``) and never runs; under a plugin with no gate it ``exec:``s.
+# ---------------------------------------------------------------------------
+
+# The veteran must have executed at least this many in-policy actions before the
+# rogue attempt, so "a high-reputation agent is still refused" is grounded.
+_ROGUE_MIN_REPUTATION = 3
+
+
+def _rogue_declaration(events: list[dict[str, Any]]) -> tuple[str, str, str] | None:
+    """Return the first declared rogue ``(agent, verb, resource)``, or ``None``.
+
+    Example::
+
+        pair = _rogue_declaration(events)
+    """
+    for ev in events:
+        if ev.get("kind") not in ("send", "broadcast"):
+            continue
+        msg = _message_body(ev)
+        if not msg.startswith("rogue_attempt:"):
+            continue
+        parts = msg.split(":")
+        if len(parts) >= 4:
+            return parts[1], parts[2], parts[3]
+    return None
+
+
+def _rogue_triples(events: list[dict[str, Any]], prefix: str) -> list[tuple[str, str, str]]:
+    """Collect ``(agent, verb, resource)`` triples from lines with ``prefix``.
+
+    Preserves trace order. Used for ``exec:`` and ``blocked:`` lines and, with a
+    trailing field trimmed, for the ``permit:`` lines.
+
+    Example::
+
+        execs = _rogue_triples(events, "exec:")
+    """
+    out: list[tuple[str, str, str]] = []
+    for ev in events:
+        if ev.get("kind") not in ("send", "broadcast"):
+            continue
+        msg = _message_body(ev)
+        if not msg.startswith(prefix):
+            continue
+        parts = msg.split(":")
+        if len(parts) >= 4:
+            out.append((parts[1], parts[2], parts[3]))
+    return out
+
+
+def _rogue_permits(events: list[dict[str, Any]]) -> list[tuple[str, str, str, str]]:
+    """Collect ``(agent, verb, resource, outcome)`` from ``permit:`` lines.
+
+    ``permit_env:`` lines are excluded — their prefix is not ``permit:``.
+
+    Example::
+
+        decisions = _rogue_permits(events)
+    """
+    out: list[tuple[str, str, str, str]] = []
+    for ev in events:
+        if ev.get("kind") not in ("send", "broadcast"):
+            continue
+        msg = _message_body(ev)
+        if not msg.startswith("permit:"):
+            continue
+        parts = msg.split(":")
+        if len(parts) >= 5:
+            out.append((parts[1], parts[2], parts[3], parts[4]))
+    return out
+
+
+def validate_rogue_trusted_agent_blocked(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """The declared out-of-policy attempt is refused and never executes.
+
+    Reads the trace the scenario emits — never a policy table — and holds iff:
+
+    * a ``rogue_attempt:`` line declares the veteran's out-of-policy pair,
+    * **no** ``exec:`` line runs that pair (it did not execute), and
+    * a ``permit:...:denied`` line refused that exact pair.
+
+    ``score_average`` FAILS this: with no pre-action gate the veteran acts
+    unconditionally, so an ``exec:`` line for the rogue pair is present.
+    ``aae_permit_gate`` PASSES: it returns a signed denial and the action is
+    blocked. A trace that never declared a rogue attempt also fails — without
+    crashing on either layer.
+
+    Example::
+
+        results = validate_rogue_trusted_agent_blocked(events)
+    """
+    rogue = _rogue_declaration(events)
+    if rogue is None:
+        return [
+            ValidationResult(
+                "rogue_trusted_agent_blocked",
+                False,
+                "no rogue_attempt declared in trace",
+            )
+        ]
+    agent, verb, resource = rogue
+    executed = rogue in _rogue_triples(events, "exec:")
+    denied = any(
+        (a, v, r) == rogue and outcome == "denied" for a, v, r, outcome in _rogue_permits(events)
+    )
+
+    if executed:
+        return [
+            ValidationResult(
+                "rogue_trusted_agent_blocked",
+                False,
+                f"rogue action executed: {agent} ran {verb} on {resource} "
+                "(no pre-action gate refused it)",
+            )
+        ]
+    if not denied:
+        return [
+            ValidationResult(
+                "rogue_trusted_agent_blocked",
+                False,
+                f"rogue action neither executed nor refused: {agent} {verb} {resource} "
+                "has no signed denial",
+            )
+        ]
+    return [
+        ValidationResult(
+            "rogue_trusted_agent_blocked",
+            True,
+            f"rogue action refused and blocked: {agent} denied {verb} on {resource}",
+        )
+    ]
+
+
+def validate_rogue_trusted_agent_reputation(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """Reputation was earned first, and no in-policy action was refused.
+
+    Two defense-in-depth invariants that ground the demonstration:
+
+    * the veteran executed at least ``_ROGUE_MIN_REPUTATION`` in-policy actions
+      *before* its rogue attempt — so "a high-reputation agent is still refused"
+      is real, not asserted, and
+    * every refusal in the trace names the declared rogue pair — a permit gate
+      that spuriously denied an in-policy action would be caught here.
+
+    Holds under both layers (it does not depend on the rogue being blocked), so
+    it corroborates the primary check rather than duplicating it. Never crashes.
+
+    Example::
+
+        results = validate_rogue_trusted_agent_reputation(events)
+    """
+    rogue = _rogue_declaration(events)
+    if rogue is None:
+        return [
+            ValidationResult(
+                "rogue_trusted_agent_reputation",
+                False,
+                "no rogue_attempt declared in trace",
+            )
+        ]
+    veteran, _verb, _resource = rogue
+
+    # In-policy executions by the veteran, in trace order, before the rogue pair.
+    prior = 0
+    for a, v, r in _rogue_triples(events, "exec:"):
+        if (a, v, r) == rogue:
+            break
+        if a == veteran:
+            prior += 1
+
+    problems: list[str] = []
+    if prior < _ROGUE_MIN_REPUTATION:
+        problems.append(
+            f"veteran executed only {prior} in-policy action(s) before the rogue attempt "
+            f"(need >= {_ROGUE_MIN_REPUTATION} to prove reputation is irrelevant)"
+        )
+    spurious = [
+        (a, v, r)
+        for a, v, r, outcome in _rogue_permits(events)
+        if outcome == "denied" and (a, v, r) != rogue
+    ]
+    if spurious:
+        problems.append(
+            "in-policy actions spuriously denied: "
+            + ", ".join(f"{a}:{v}:{r}" for a, v, r in sorted(set(spurious)))
+        )
+
+    if problems:
+        return [ValidationResult("rogue_trusted_agent_reputation", False, "; ".join(problems))]
+    return [
+        ValidationResult(
+            "rogue_trusted_agent_reputation",
+            True,
+            f"veteran earned {prior} in-policy actions; every refusal was the declared rogue pair",
+        )
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Multi-attribute negotiation (Pareto) validators
 # ---------------------------------------------------------------------------
 
@@ -4363,5 +4573,9 @@ VALIDATORS: dict[str, list[Any]] = {
         validate_parc_ring_severed,
         validate_parc_replay_rejected,
         validate_parc_stale_key_rejected,
+    ],
+    "rogue_trusted_agent": [
+        validate_rogue_trusted_agent_blocked,
+        validate_rogue_trusted_agent_reputation,
     ],
 }

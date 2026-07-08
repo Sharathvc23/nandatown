@@ -135,3 +135,9 @@ def _try_load_builtin(name: str) -> None:
         )
 
         register_scenario("parc_migration", parc_migration_factory)
+    elif name == "rogue_trusted_agent":
+        from nest_core.scenarios_builtin.rogue_trusted_agent import (
+            rogue_trusted_agent_factory,
+        )
+
+        register_scenario("rogue_trusted_agent", rogue_trusted_agent_factory)
