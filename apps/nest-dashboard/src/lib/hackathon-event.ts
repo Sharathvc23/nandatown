@@ -52,14 +52,4 @@ export const hackathonFaqs: FaqEntry[] = [
     answer:
       "A judge panel scores each submission on correctness, realism, design, and docs. On July 11, judging runs 9:30 AM to noon to select the top 10 teams, with demos and sessions from 2 to 5 PM.",
   },
-  {
-    question: "Who is hosting?",
-    answer:
-      "Project NANDA — Ramesh Raskar, Maria Gorskikh, and Vedh Krishnan — co-hosted by HCLTech and MIT Media Lab.",
-  },
-  {
-    question: "Does everyone on my team need to register for July 11?",
-    answer:
-      "Only people attending in person. Each attending team member registers individually on Luma. Virtual teams can skip registration entirely.",
-  },
 ];
