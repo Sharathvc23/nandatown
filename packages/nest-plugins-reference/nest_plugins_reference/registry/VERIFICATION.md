@@ -219,17 +219,48 @@ the test was written to *document* it (e.g.
    identity needs a governance decision this plugin does not make on its
    own. A real deployment wanting rehabilitation would need an external,
    explicit un-quarantine action -- there is none here.
-   - **Quarantine does not propagate as network state.** A publisher
-     quarantined by agent `v` simply stops appearing in `v`'s digest/view;
-     downstream peers who only ever pull from `v` never learn *why* that
-     publisher disappeared, they just never see it. This is sufficient for
-     "never (re)enters an honest view downstream of the witness," but it
-     means an agent that never itself directly receives both conflicting
-     cards (via any path) will never get its own `equivocations` ledger
-     entry for that publisher -- only the direct witness(es) do. The
-     validator's bar (`check_no_equivocation_accepted`) is deliberately
-     "*some* honest agent's ledger recorded it," not "every honest agent's
-     ledger recorded it," for exactly this reason.
+   - **Disjoint-delivery equivocation is now closed, mesh-wide.** An earlier
+     iteration of this plugin had a real gap here: the witness map only
+     fires at a node that actually *receives* both conflicting cards, so a
+     digest keyed on bare `(version, publisher_id)` would judge two nodes
+     that each independently accepted a different conflicting write at the
+     identical key as already "in sync" (equal tag) and never exchange the
+     other's copy -- an equivocator sending card1 only to group A and card2
+     only to group B, with no common recipient, could split the mesh
+     permanently with no honest node ever witnessing it. That gap is fixed:
+     the `OP_DIGEST` payload now carries a per-entry **content hash** in
+     addition to the write tag, and `_compute_missing` pushes a card
+     whenever a peer's digest entry is the *same tag but a different
+     content hash* -- not just when it's absent or stale. That one clause
+     is what makes a conflicting same-version write propagate over
+     anti-entropy instead of being mistaken for a redelivery, so group A's
+     and group B's copies of the equivocator's cards eventually reach each
+     other, every honest node independently re-derives the conflict from
+     its own witness map, records `(publisher, version)` in its own
+     `equivocations` ledger, and quarantines and evicts the publisher --
+     with no dependence on which node(s) were the original direct
+     recipients. See `_compute_missing`'s same-tag-different-hash push
+     clause (`nest_plugins_reference/registry/byzantine_gossip.py`) and
+     `test_disjoint_delivery_equivocation_is_caught`
+     (`test_byzantine_gossip.py`), which pins down exactly this topology and
+     asserts both group-A and group-B honest nodes catch it independently.
+   - **Residual caveat (still honest, now narrower): quarantine itself is
+     not gossiped as explicit shared state.** There is no "quarantine
+     announcement" message -- each node re-derives quarantine-worthiness
+     independently, from the conflicting card it eventually receives over
+     anti-entropy, not from being told "node X quarantined agent E." This
+     means there can be a brief transient window, while the conflicting
+     write is still propagating, during which some honest nodes have
+     already quarantined the equivocator and others have not yet seen the
+     second card -- but this window closes as propagation completes, and
+     convergence to "the equivocator is quarantined and evicted everywhere"
+     holds mesh-wide, unlike the old disjoint-delivery gap where the split
+     was permanent. The validator's bar (`check_no_equivocation_accepted`)
+     remains "*some* honest agent's ledger recorded it," which is now a
+     conservative floor rather than the only honest guarantee available --
+     `test_disjoint_delivery_equivocation_is_caught` demonstrates the
+     stronger "multiple/all honest agents recorded it" property directly
+     for that scenario.
 5. **`check_no_forged_card_in_view`'s gossip-FAIL is partly structural.**
    `gossip` never signs *anything*, including its own honest agents' own
    registrations -- so this validator FAILs under `gossip` in every
