@@ -19,6 +19,11 @@ the validators in
 the trace.  Under ``auth: delegatable`` all three attacks are refused;
 under ``auth: jwt`` they succeed and the validators fail.
 
+The scenario is deliberately **seed-invariant**: agents draw nothing
+from ``ctx.rng``, so the trace is byte-identical across seeds.  The
+adversarial behaviours are structural (fixed roles, fixed ticks), not
+sampled — determinism here is a property under test, not an accident.
+
 Example::
 
     agents = delegated_auth_factory(config, plugins)
