@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { hackathonEvent } from "@/lib/hackathon-event";
 
 /**
  * Site-wide announcement bar, rendered above the navbar on every page.
@@ -10,11 +9,12 @@ export function HackathonBanner() {
     <div className="bg-ink-900 text-cream-100">
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-x-5 gap-y-1 px-6 sm:px-10 py-2.5 text-center text-[0.85rem] leading-snug">
         <span>
-          <span className="font-semibold text-cream-50">
-            NandaHack is on — join virtually from anywhere.
-          </span>{" "}
+          <span className="font-semibold text-cream-50">NandaHack is on.</span>{" "}
           <span className="text-cream-200">
-            Submissions due {hackathonEvent.submissionDeadline}.
+            <span className="font-semibold text-cream-50">Jul 10, 12 PM ET</span>
+            {" — "}initial SkillMD + Phase 1 PRs due (registers you).{" "}
+            <span className="font-semibold text-cream-50">Jul 11, 2 PM ET</span>
+            {" — "}SkillMDs final + demo video (required for judging, not scored).
           </span>
         </span>
         <span className="flex items-center gap-4">
