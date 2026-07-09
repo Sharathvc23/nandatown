@@ -52,11 +52,26 @@ silently deleting a live one).  Binding the signature to
 tampered tag or tombstone now fails verification and is dropped as
 ``bad_signature``, exactly like a forged/mutated card.
 
-Note what this still does **not** defend against: a publisher who signs two
-*different*, both validly-signed cards at the same version (equivocation).
-Signature verification alone cannot detect that — both cards check out.
-Task 3 adds the witness/quarantine mechanism for that. Task 4 adds
-eclipse-resistant peer sampling + adversarial scenarios and validators.
+Task 3 (this task) closes the gap the module docstring above used to end
+on: a publisher who signs two *different*, both validly-signed cards at the
+same version (equivocation). Signature verification alone cannot detect
+that — both cards individually pass every check Task 2 added, and ``#67``'s
+registration-only signing would happily accept either one too, since it
+only ever checks a card against *itself*, never against the publisher's
+other writes. That is exactly the invariant registration-signing cannot
+provide: **both equivocating cards are validly signed by their claimed
+publisher.** The only way to catch this is to compare a publisher's writes
+to each other, not to a signature. This plugin keeps a witness map from
+``(publisher_id, version)`` to a content hash of the first verified write it
+saw at that key; a second *verified* card at the same key with a
+*different* hash proves the publisher signed two conflicting writes, which
+is only possible if the publisher itself is byzantine (a relay cannot forge
+this — see ``canonical_write_bytes``, version and tombstone are signed).
+The publisher is quarantined on the spot: its card is evicted from the
+local view, the conflict is recorded in ``self.equivocations``, and every
+subsequent card from that publisher — genuinely signed or not — is refused
+without re-litigating the question. Task 4 adds eclipse-resistant peer
+sampling + adversarial scenarios and validators.
 
 Example::
 
@@ -71,6 +86,7 @@ Example::
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from collections.abc import AsyncIterator
@@ -118,6 +134,18 @@ Example::
     reg.rejections.append((AgentId("a"), REASON_BAD_SIGNATURE))
 """
 
+REASON_QUARANTINED = "quarantined"
+"""Rejection reason: ``card.agent_id`` was already caught equivocating (see
+``ByzantineGossipRegistry.equivocations``) and is permanently quarantined.
+Every subsequent card from this publisher is refused on sight — even one
+that would itself verify cleanly — because a publisher proven to sign
+conflicting writes once cannot be trusted to have stopped.
+
+Example::
+
+    reg.rejections.append((AgentId("e"), REASON_QUARANTINED))
+"""
+
 
 @dataclass
 class _Versioned:
@@ -150,7 +178,11 @@ class ByzantineGossipRegistry:
     ``card.agent_id`` and the wire-supplied version/tombstone) before
     merging an inbound card — see the module docstring for why
     registration-only, content-only signing (``#67``) is not enough.
-    Equivocation detection and eclipse resistance land in Tasks 3-4.
+    ``handle_gossip`` also witnesses every verified write against
+    ``(publisher_id, version)`` and quarantines a publisher caught signing
+    two different cards at the same version (equivocation) — see
+    ``equivocations`` and the module docstring. Eclipse resistance lands in
+    Task 4.
 
     Driver agents call ``gossip_round(ctx)`` on a schedule and forward
     inbound ``GOSSIP_PREFIX``-marked payloads to
@@ -175,12 +207,49 @@ class ByzantineGossipRegistry:
         """Ledger of cards dropped during gossip merge: ``(agent_id, reason)``
         pairs, in the order they were rejected.  ``reason`` is one of
         ``REASON_MISSING_SIGNATURE``, ``REASON_SIGNER_MISMATCH``,
-        ``REASON_BAD_SIGNATURE``.  Exposed for validators/tests, not part of
-        the ``Registry`` Protocol.
+        ``REASON_BAD_SIGNATURE``, ``REASON_QUARANTINED``.  Exposed for
+        validators/tests, not part of the ``Registry`` Protocol.
 
         Example::
 
             assert reg.rejections == [(AgentId("a"), "bad_signature")]
+        """
+        self.equivocations: list[tuple[AgentId, int]] = []
+        """Ledger of proven equivocations: ``(publisher_id, version)`` pairs,
+        in detection order.  A publisher lands here when this registry sees
+        **two independently-verified** cards from it at the same version
+        whose content differs — proof the publisher itself signed two
+        conflicting writes, since ``canonical_write_bytes`` binds the
+        signature to ``(content, version, tombstone)`` and a non-publisher
+        relay cannot forge that.  This is the invariant registration-only
+        signing (``#67``) cannot provide: both cards that trigger an entry
+        here are validly signed by their claimed publisher — the defect is
+        not a bad signature, it is two good ones that contradict each
+        other.  Exposed for validators/tests, not part of the ``Registry``
+        Protocol.
+
+        Example::
+
+            assert reg.equivocations == [(AgentId("e"), 1)]
+        """
+        self._quarantined: set[AgentId] = set()
+        """Publishers with at least one entry in ``equivocations``.  Checked
+        at the top of the ``OP_PUSH`` loop so every later card from a
+        quarantined publisher is refused (``REASON_QUARANTINED``) without
+        even attempting verification — quarantine is permanent for the
+        lifetime of this registry instance, not a one-shot conflict
+        resolution.
+        """
+        self._seen: dict[tuple[AgentId, int], str] = {}
+        """Witness map: ``(publisher_id, version) -> content_hash`` for the
+        first verified card this registry processed at that key.
+        ``content_hash`` is ``sha256(canonical_write_bytes(card, version,
+        tombstone)).hexdigest()`` — hashing the full write (not just
+        ``canonical_card_bytes``) so a publisher that signs a live card and
+        a tombstone at the same version is also caught, not only a
+        content-vs-content conflict.  A retransmission of the *identical*
+        write (same hash) is not equivocation and is left alone; see
+        ``_witness_write``.
         """
 
     # ------------------------------------------------------------------
@@ -290,10 +359,14 @@ class ByzantineGossipRegistry:
         and tombstone bit, not just the card content — so unsigned,
         impersonating, forged/mutated, replayed-with-a-forged-version, or
         tombstone-flipped entries are all dropped and recorded in
-        ``self.rejections`` instead of being applied.  Equivocation
-        detection (two differently-signed cards from the same publisher at
-        the same version — both individually valid) is not caught here; see
-        Task 3.
+        ``self.rejections`` instead of being applied.  A quarantined
+        publisher's cards are refused outright (``REASON_QUARANTINED``,
+        skipping verification entirely).  Otherwise-valid cards are then
+        witnessed against ``(publisher, version)``: a second, verified, but
+        *content-differing* card at an already-witnessed key proves
+        equivocation — both cards are validly signed, so no signature check
+        alone can catch this — and quarantines the publisher on the spot
+        (see ``equivocations`` and the module docstring).
 
         Example::
 
@@ -314,9 +387,14 @@ class ByzantineGossipRegistry:
             return True
         if op == OP_PUSH:
             for card, tag, tombstone in _decode_push(rest):
+                if card.agent_id in self._quarantined:
+                    self.rejections.append((card.agent_id, REASON_QUARANTINED))
+                    continue
                 reason = _verify_card(card, tag.version, tombstone, self._identity)
                 if reason is not None:
                     self.rejections.append((card.agent_id, reason))
+                    continue
+                if self._witness_write(card, tag, tombstone):
                     continue
                 self._apply(card, tag, tombstone=tombstone)
             return True
@@ -350,6 +428,51 @@ class ByzantineGossipRegistry:
         if existing is not None and existing.tag >= tag:
             return
         self._view[card.agent_id] = _Versioned(card=card, tag=tag, tombstone=tombstone)
+
+    def _witness_write(self, card: AgentCard, tag: _WriteTag, tombstone: bool) -> bool:
+        """Record ``card`` in the witness map; detect + quarantine equivocation.
+
+        Called only for cards that already **passed signature
+        verification** — an unverified card proves nothing about what its
+        claimed publisher actually signed, so it must never reach the
+        witness map (a relay with no private key could otherwise frame an
+        honest publisher for equivocation just by broadcasting garbage
+        under its ``agent_id``).
+
+        Looks up ``(card.agent_id, tag.version)`` in ``self._seen``:
+
+        * Not seen before → record this write's hash, allow it through
+          (returns ``False``).
+        * Seen before with the **same** hash → a harmless retransmission of
+          the identical write (gossip is allowed to redeliver); allow it
+          through (returns ``False``).
+        * Seen before with a **different** hash → proof this publisher
+          signed two conflicting writes at the same version. Both are
+          validly signed — this is exactly what a signature check cannot
+          catch. Appends ``(publisher, version)`` to ``self.equivocations``,
+          adds the publisher to ``self._quarantined``, evicts any card from
+          this publisher already sitting in the local view, and returns
+          ``True`` so the caller does not ``_apply`` this card either.
+
+        Example::
+
+            if reg._witness_write(card, tag, tombstone):
+                continue  # equivocation: do not apply
+        """
+        key = (card.agent_id, tag.version)
+        content_hash = hashlib.sha256(
+            canonical_write_bytes(card, tag.version, tombstone)
+        ).hexdigest()
+        seen_hash = self._seen.get(key)
+        if seen_hash is None:
+            self._seen[key] = content_hash
+            return False
+        if seen_hash == content_hash:
+            return False
+        self.equivocations.append((card.agent_id, tag.version))
+        self._quarantined.add(card.agent_id)
+        self._view.pop(card.agent_id, None)
+        return True
 
     def _digest(self) -> dict[AgentId, _WriteTag]:
         return {aid: v.tag for aid, v in self._view.items()}

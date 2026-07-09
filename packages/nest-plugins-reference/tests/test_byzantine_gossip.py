@@ -281,6 +281,93 @@ def test_canonical_card_bytes_differs_on_content_change() -> None:
     assert canonical_card_bytes(card1) != canonical_card_bytes(card2)
 
 
+# ---------------------------------------------------------------------------
+# Equivocation: BOTH cards are validly signed -- registration-signing alone
+# (#67) and per-hop re-verification (Task 2) both accept either one in
+# isolation. The only way to catch this is noticing that the SAME publisher
+# signed TWO DIFFERENT writes at the SAME version.
+# ---------------------------------------------------------------------------
+
+
+def test_equivocation_detected_and_quarantined() -> None:
+    """Publisher E validly signs two different cards at the same version.
+
+    Both ``card_1`` and ``card_2`` verify individually -- each carries a
+    genuine signature from E over its own ``canonical_write_bytes``. Neither
+    is forged, mutated, impersonated, or replayed with a tampered tag, so
+    every check from Task 2 (and ``#67``'s registration-only signing) passes
+    both of them. The equivocation is only visible by comparing the two
+    writes to each other: same ``(publisher, version)``, different content.
+    Feeding both to ``reg_b`` via gossip must: record ``(e, version)`` in
+    ``equivocations``, quarantine E, evict E's card from the local view, and
+    refuse every subsequent card from E -- honest-looking or not.
+    """
+    idents = _peered_identities("e", "b")
+    net = GossipNetwork(agent_ids=[AgentId("e"), AgentId("b")])
+    reg_b = ByzantineGossipRegistry(AgentId("b"), net, idents["b"])
+
+    version = 1
+    tag = _WriteTag(version=version, publisher_id=AgentId("e"))
+
+    card_1 = AgentCard(agent_id=AgentId("e"), name="E", capabilities=["sell"])
+    sig_1 = idents["e"].sign(canonical_write_bytes(card_1, version, False))
+    signed_1 = card_1.model_copy(
+        update={
+            "metadata": {
+                "sig": {"signer": "e", "value": sig_1.value.hex(), "algorithm": sig_1.algorithm}
+            }
+        }
+    )
+
+    card_2 = AgentCard(agent_id=AgentId("e"), name="E", capabilities=["buy"])
+    sig_2 = idents["e"].sign(canonical_write_bytes(card_2, version, False))
+    signed_2 = card_2.model_copy(
+        update={
+            "metadata": {
+                "sig": {"signer": "e", "value": sig_2.value.hex(), "algorithm": sig_2.algorithm}
+            }
+        }
+    )
+
+    # First write arrives via gossip: verifies, lands normally.
+    payload_1 = _push_payload([(signed_1, tag, False)])
+    result_1 = asyncio.run(reg_b.handle_gossip(AgentId("e"), payload_1, _StubContext()))  # type: ignore[arg-type]
+    assert result_1 is True
+    assert AgentId("e") in reg_b.view_snapshot()
+
+    # Second, CONFLICTING write at the SAME version arrives: also verifies
+    # in isolation, but now the witness map catches the equivocation.
+    payload_2 = _push_payload([(signed_2, tag, False)])
+    result_2 = asyncio.run(reg_b.handle_gossip(AgentId("e"), payload_2, _StubContext()))  # type: ignore[arg-type]
+    assert result_2 is True
+
+    assert reg_b.equivocations == [(AgentId("e"), version)]
+    assert AgentId("e") in reg_b._quarantined  # pyright: ignore[reportPrivateUsage]
+    assert AgentId("e") not in reg_b.view_snapshot()
+    assert asyncio.run(reg_b.lookup(Query())) == []
+
+    # A THIRD, honest-looking card (fresh version, genuinely signed) from E
+    # is still refused outright -- quarantine is sticky, not just a one-time
+    # conflict resolution.
+    tag_3 = _WriteTag(version=2, publisher_id=AgentId("e"))
+    card_3 = AgentCard(agent_id=AgentId("e"), name="E", capabilities=["sell"])
+    sig_3 = idents["e"].sign(canonical_write_bytes(card_3, tag_3.version, False))
+    signed_3 = card_3.model_copy(
+        update={
+            "metadata": {
+                "sig": {"signer": "e", "value": sig_3.value.hex(), "algorithm": sig_3.algorithm}
+            }
+        }
+    )
+    payload_3 = _push_payload([(signed_3, tag_3, False)])
+    asyncio.run(reg_b.handle_gossip(AgentId("e"), payload_3, _StubContext()))  # type: ignore[arg-type]
+
+    assert AgentId("e") not in reg_b.view_snapshot()
+    assert reg_b.rejections[-1] == (AgentId("e"), "quarantined")
+    # Quarantine did not spuriously grow the equivocations ledger.
+    assert reg_b.equivocations == [(AgentId("e"), version)]
+
+
 def test_register_signs_card_with_verifiable_signature() -> None:
     idents = _peered_identities("a")
     net = GossipNetwork(agent_ids=[AgentId("a")])
