@@ -132,11 +132,17 @@ export default async function SkillsPage({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-xl">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-rust">
-                  Audience Choice Award · $1,000
+                  Audience Choice Award · $1,000 · SkillMD only
                 </p>
                 <p className="mt-2.5 text-[0.95rem] leading-[1.6] text-ink-600">
-                  Heart your favorite submissions. The submission with the most
-                  likes wins the Audience Choice Award and{" "}
+                  This applies to the SkillMD submissions on this page only —
+                  your{" "}
+                  <span className="font-semibold text-ink-900">
+                    Phase 2 submission
+                  </span>
+                  , which counts for 80% of your score. Heart your favorites
+                  below; the SkillMD here with the most likes wins the Audience
+                  Choice Award and{" "}
                   <span className="font-semibold text-ink-900">$1,000</span>.
                   Anyone can see the vote counts and who cast them; liking needs
                   a quick sign-in so it stays bot-free.
