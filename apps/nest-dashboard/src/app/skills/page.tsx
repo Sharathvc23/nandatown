@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { listSkills, type Skill } from "@/lib/skills";
 import { getSessionUser } from "@/lib/auth";
 import { listAllLikes, type SkillLikeSummary } from "@/lib/likes";
-import { HackathonPhases } from "@/components/hackathon-phases";
 import { AuthChip } from "./auth-chip";
-import { CodeBlock } from "./code-block";
 import { LikeButton } from "./like-button";
 import { SubmitForm } from "./submit-form";
 
@@ -40,14 +38,6 @@ function Section({
   );
 }
 
-function InlineCode({ children }: { children: React.ReactNode }) {
-  return (
-    <code className="rounded-md border border-cream-400/70 bg-cream-200 px-1.5 py-0.5 font-mono text-[0.85em] text-rust">
-      {children}
-    </code>
-  );
-}
-
 const TYPE_LABEL: Record<Skill["source_type"], string> = {
   url: "Hosted link",
   github: "GitHub",
@@ -61,46 +51,6 @@ function formatDate(iso: string): string {
     day: "numeric",
   });
 }
-
-/* ------------------------------------------------------------------ */
-/*  Example + API snippets                                             */
-/* ------------------------------------------------------------------ */
-
-const EXAMPLE_SKILL = `# Weather Lookup
-
-Get the current weather for any city.
-
-## Base URL
-https://weather.example.com
-
-## Endpoints
-
-GET /weather?city={city}
-  Returns the current weather for one city.
-  Example:
-    curl "https://weather.example.com/weather?city=Boston"
-  Response:
-    { "city": "Boston", "tempF": 64, "sky": "cloudy" }
-
-## How the agent should use this
-1. Ask the user which city they want.
-2. Call GET /weather with that city.
-3. Read tempF and sky from the answer, then tell the user.`;
-
-const API_LIST = `# List every SkillMD
-curl https://nandatown.projectnanda.org/api/skills
-
-# Get one SkillMD
-curl https://nandatown.projectnanda.org/api/skills/<id>`;
-
-const API_POST = `curl -X POST https://nandatown.projectnanda.org/api/skills \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Weather Lookup",
-    "source_type": "url",
-    "source_url": "https://weather.example.com/skill.md",
-    "endpoints": "GET /weather?city={city}"
-  }'`;
 
 /* ================================================================== */
 /*  Page                                                               */
@@ -172,174 +122,41 @@ export default async function SkillsPage({
         <div className="h-px bg-cream-400/70" />
 
         {/* ---------------------------------------------------------- */}
-        {/*  TWO-PHASE HACKATHON BLOCK                                   */}
-        {/* ---------------------------------------------------------- */}
-        <section className="py-10">
-          <HackathonPhases />
-        </section>
-
-        <div className="h-px bg-cream-400/70" />
-
-        {/* ---------------------------------------------------------- */}
-        {/*  WHAT IS IT                                                  */}
-        {/* ---------------------------------------------------------- */}
-        <Section eyebrow="The idea" title="What’s a SkillMD?">
-          <p className="mb-5 text-[1.05rem] leading-[1.7] text-ink-500">
-            It’s just a Markdown file. Think of it as a how-to written for an
-            agent instead of a person. It says what your tool does, where it
-            lives, and the steps to use it. The agent reads the file like a
-            recipe card and follows along.
-          </p>
-          <p className="mb-8 text-[1.05rem] leading-[1.7] text-ink-500">
-            A SkillMD has two parts, and you need both:
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-cream-400/70 bg-cream-50 p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-rust">
-                Part 1
-              </p>
-              <h3 className="mt-3 font-display text-[1.4rem] leading-tight text-ink-900">
-                The instructions
-              </h3>
-              <p className="mt-2 text-[0.95rem] leading-[1.6] text-ink-500">
-                The Markdown itself — what the skill does and the exact steps
-                the agent should take.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-cream-400/70 bg-cream-50 p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-rust">
-                Part 2
-              </p>
-              <h3 className="mt-3 font-display text-[1.4rem] leading-tight text-ink-900">
-                The endpoints
-              </h3>
-              <p className="mt-2 text-[0.95rem] leading-[1.6] text-ink-500">
-                Your real API — live URLs the agent can actually call. The file
-                points at them; they do the work.
-              </p>
-            </div>
-          </div>
-        </Section>
-
-        <div className="h-px bg-cream-400/70" />
-
-        {/* ---------------------------------------------------------- */}
-        {/*  WHAT YOU NEED                                               */}
-        {/* ---------------------------------------------------------- */}
-        <Section eyebrow="Before you submit" title="What you need">
-          <ol className="space-y-5">
-            {[
-              {
-                n: "1",
-                head: "A SkillMD file",
-                body: (
-                  <>
-                    A Markdown file with a name, what it does, the base URL,
-                    each endpoint, and step-by-step how the agent should use it.
-                    See the example below.
-                  </>
-                ),
-              },
-              {
-                n: "2",
-                head: "Endpoints that are actually online",
-                body: (
-                  <>
-                    The URLs in your file have to be real and reachable. Host
-                    them somewhere that stays up — Render, Railway, Vercel, Fly,
-                    or your own server. A SkillMD with dead links does nothing.
-                  </>
-                ),
-              },
-              {
-                n: "3",
-                head: "Test them first",
-                body: (
-                  <>
-                    Open an endpoint in your browser or run{" "}
-                    <InlineCode>curl</InlineCode>. If it doesn’t answer for you,
-                    it won’t answer for the agent.
-                  </>
-                ),
-              },
-            ].map((item) => (
-              <li
-                key={item.n}
-                className="flex gap-4 rounded-2xl border border-cream-400/70 bg-cream-50 p-6"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-900 font-mono text-[0.85rem] text-cream-50">
-                  {item.n}
-                </span>
-                <div>
-                  <h3 className="font-display text-[1.3rem] leading-tight text-ink-900">
-                    {item.head}
-                  </h3>
-                  <p className="mt-1.5 text-[0.95rem] leading-[1.6] text-ink-500">
-                    {item.body}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Section>
-
-        <div className="h-px bg-cream-400/70" />
-
-        {/* ---------------------------------------------------------- */}
-        {/*  WRITE ONE                                                   */}
-        {/* ---------------------------------------------------------- */}
-        <Section eyebrow="Write it" title="A SkillMD, start to finish">
-          <p className="mb-2 text-[1.05rem] leading-[1.7] text-ink-500">
-            Here’s a whole one. Copy it, change the name and the URLs to your
-            own, and you’re most of the way there.
-          </p>
-          <CodeBlock title="skill.md">{EXAMPLE_SKILL}</CodeBlock>
-          <p className="text-[0.95rem] leading-[1.65] text-ink-500">
-            Keep it short and concrete. List every endpoint the agent might
-            need, show one example call and answer, and spell out the steps in
-            plain words.
-          </p>
-        </Section>
-
-        <div className="h-px bg-cream-400/70" />
-
-        {/* ---------------------------------------------------------- */}
-        {/*  API                                                         */}
-        {/* ---------------------------------------------------------- */}
-        <Section eyebrow="For agents" title="Read the registry from code">
-          <p className="mb-2 text-[1.05rem] leading-[1.7] text-ink-500">
-            Every submission is available over a small JSON API. An agent can
-            pull the list, then fetch one skill to read its instructions.
-          </p>
-          <CodeBlock title="Read">{API_LIST}</CodeBlock>
-          <p className="mt-6 mb-2 text-[1.05rem] leading-[1.7] text-ink-500">
-            You can also register a SkillMD without the form:
-          </p>
-          <CodeBlock title="Register">{API_POST}</CodeBlock>
-        </Section>
-
-        <div className="h-px bg-cream-400/70" />
-
-        {/* ---------------------------------------------------------- */}
         {/*  LIST                                                        */}
         {/* ---------------------------------------------------------- */}
         <Section
           eyebrow="The registry"
           title={`Submitted so far${skills.length ? ` · ${skills.length}` : ""}`}
         >
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cream-400/70 bg-cream-50 px-5 py-4">
-            <p className="max-w-sm text-[0.9rem] leading-[1.5] text-ink-500">
-              <span className="font-semibold text-ink-700">Audience Choice:</span>{" "}
-              heart your favorite submissions. Anyone can see the votes and who
-              cast them; liking needs a quick sign-in so it stays bot-free.
-            </p>
-            <AuthChip
-              viewer={
-                viewer
-                  ? { name: viewer.name, avatar: viewer.avatar, provider: viewer.provider }
-                  : null
-              }
-            />
+          <div className="mb-6 rounded-2xl border border-rust/40 bg-rust/[0.06] px-5 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-xl">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-rust">
+                  Audience Choice Award · $1,000
+                </p>
+                <p className="mt-2.5 text-[0.95rem] leading-[1.6] text-ink-600">
+                  Heart your favorite submissions. The submission with the most
+                  likes wins the Audience Choice Award and{" "}
+                  <span className="font-semibold text-ink-900">$1,000</span>.
+                  Anyone can see the vote counts and who cast them; liking needs
+                  a quick sign-in so it stays bot-free.
+                </p>
+                <p className="mt-2.5 text-[0.95rem] leading-[1.6] text-ink-600">
+                  Want the votes? Share your build on{" "}
+                  <span className="font-semibold text-ink-900">LinkedIn</span>{" "}
+                  and tag{" "}
+                  <span className="font-semibold text-ink-900">Project NANDA</span>{" "}
+                  to rally support.
+                </p>
+              </div>
+              <AuthChip
+                viewer={
+                  viewer
+                    ? { name: viewer.name, avatar: viewer.avatar, provider: viewer.provider }
+                    : null
+                }
+              />
+            </div>
           </div>
           {authError && (
             <div className="mb-6 rounded-2xl border border-rust/40 bg-rust/10 px-5 py-3 text-[0.9rem] text-rust">
