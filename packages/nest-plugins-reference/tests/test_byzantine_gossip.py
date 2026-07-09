@@ -368,6 +368,85 @@ def test_equivocation_detected_and_quarantined() -> None:
     assert reg_b.equivocations == [(AgentId("e"), version)]
 
 
+# ---------------------------------------------------------------------------
+# No-false-positive: the other half of the equivocation-quarantine claim --
+# an HONEST publisher must never be caught by the equivocation witness map.
+# ---------------------------------------------------------------------------
+
+
+def test_honest_multiwrite_history_not_equivocation() -> None:
+    """Honest publisher A does register -> deregister -> register; all three writes gossiped.
+
+    Each write uses the network's shared monotonic ``next_version()``, so
+    every ``(publisher, version)`` key the witness map sees is distinct --
+    equivocation requires the *same* key with *different* content, which
+    never happens here. This locks in that a legitimate multi-write history
+    (including a tombstone) is never mistaken for the same-version conflict
+    ``test_equivocation_detected_and_quarantined`` exercises.
+    """
+    idents = _peered_identities("a", "b")
+    net = GossipNetwork(agent_ids=[AgentId("a"), AgentId("b")])
+    reg_a = ByzantineGossipRegistry(AgentId("a"), net, idents["a"])
+    reg_b = ByzantineGossipRegistry(AgentId("b"), net, idents["b"])
+
+    asyncio.run(reg_a.register(AgentCard(agent_id=AgentId("a"), name="A", capabilities=["sell"])))
+    v1 = reg_a._view[AgentId("a")]  # pyright: ignore[reportPrivateUsage]
+    payload_1 = _push_payload([(v1.card, v1.tag, v1.tombstone)])
+    result_1 = asyncio.run(reg_b.handle_gossip(AgentId("a"), payload_1, _StubContext()))  # type: ignore[arg-type]
+    assert result_1 is True
+
+    asyncio.run(reg_a.deregister(AgentId("a")))
+    v2 = reg_a._view[AgentId("a")]  # pyright: ignore[reportPrivateUsage]
+    assert v2.tombstone is True
+    payload_2 = _push_payload([(v2.card, v2.tag, v2.tombstone)])
+    result_2 = asyncio.run(reg_b.handle_gossip(AgentId("a"), payload_2, _StubContext()))  # type: ignore[arg-type]
+    assert result_2 is True
+
+    asyncio.run(reg_a.register(AgentCard(agent_id=AgentId("a"), name="A", capabilities=["buy"])))
+    v3 = reg_a._view[AgentId("a")]  # pyright: ignore[reportPrivateUsage]
+    assert v3.tombstone is False
+    assert v3.tag.version == 3  # distinct monotonic version at every step, never reused
+    payload_3 = _push_payload([(v3.card, v3.tag, v3.tombstone)])
+    result_3 = asyncio.run(reg_b.handle_gossip(AgentId("a"), payload_3, _StubContext()))  # type: ignore[arg-type]
+    assert result_3 is True
+
+    assert reg_b.equivocations == []
+    assert AgentId("a") not in reg_b._quarantined  # pyright: ignore[reportPrivateUsage]
+    [seen_card] = asyncio.run(reg_b.lookup(Query()))
+    assert seen_card.capabilities == ["buy"]  # last honest write landed, nothing evicted
+
+
+def test_identical_card_retransmission_is_idempotent() -> None:
+    """The SAME signed card at the SAME version, delivered twice, is not equivocation.
+
+    Gossip is allowed to redeliver a push verbatim (retries, overlapping
+    fanout, etc.). ``_witness_write`` treats a second arrival with an
+    *identical* content hash at an already-seen ``(publisher, version)`` key
+    as a harmless retransmission -- only a *different* hash at that key is
+    proof of conflicting writes. This pins that idempotent redelivery never
+    trips quarantine.
+    """
+    idents = _peered_identities("a", "b")
+    net = GossipNetwork(agent_ids=[AgentId("a"), AgentId("b")])
+    reg_a = ByzantineGossipRegistry(AgentId("a"), net, idents["a"])
+    reg_b = ByzantineGossipRegistry(AgentId("b"), net, idents["b"])
+
+    asyncio.run(reg_a.register(AgentCard(agent_id=AgentId("a"), name="A", capabilities=["sell"])))
+    [honest_card] = asyncio.run(reg_a.lookup(Query()))
+    honest_tag = _WriteTag(version=1, publisher_id=AgentId("a"))
+    payload = _push_payload([(honest_card, honest_tag, False)])
+
+    result_1 = asyncio.run(reg_b.handle_gossip(AgentId("a"), payload, _StubContext()))  # type: ignore[arg-type]
+    result_2 = asyncio.run(reg_b.handle_gossip(AgentId("a"), payload, _StubContext()))  # type: ignore[arg-type]
+
+    assert result_1 is True
+    assert result_2 is True
+    assert reg_b.equivocations == []
+    assert AgentId("a") not in reg_b._quarantined  # pyright: ignore[reportPrivateUsage]
+    [seen_card] = asyncio.run(reg_b.lookup(Query()))
+    assert seen_card.name == "A"
+
+
 def test_register_signs_card_with_verifiable_signature() -> None:
     idents = _peered_identities("a")
     net = GossipNetwork(agent_ids=[AgentId("a")])
