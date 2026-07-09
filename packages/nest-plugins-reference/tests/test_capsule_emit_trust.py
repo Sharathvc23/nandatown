@@ -1,20 +1,23 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Smoke tests: instantiate both plugins and exercise one happy path each."""
+"""Smoke tests for CapsuleEmitTrust and StripeCapsuledPayments."""
+
+from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
-from capsule_emit_nanda.payments import StripeCapsuledPayments
-from capsule_emit_nanda.trust import CapsuleEmitTrust
 from nest_core.types import AgentId, Evidence
+from nest_plugins_reference.payments.capsule_emit_payments import StripeCapsuledPayments
+from nest_plugins_reference.trust.capsule_emit_trust import CapsuleEmitTrust
 
 
 @pytest.fixture(autouse=True)
-def no_real_stripe(monkeypatch):
+def no_real_stripe(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure sandbox mode regardless of the host environment."""
     monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
 
 
-@pytest.mark.asyncio
-async def test_trust_report_and_score(tmp_path):
+async def test_trust_report_and_score(tmp_path: Path) -> None:
     plugin = CapsuleEmitTrust(ledger=tmp_path / "ledger.jsonl")
     agent = AgentId("agent-a")
     reporter = AgentId("agent-b")
@@ -28,8 +31,7 @@ async def test_trust_report_and_score(tmp_path):
     assert 0.0 <= score.score <= 1.0
 
 
-@pytest.mark.asyncio
-async def test_sandbox_pay(tmp_path):
+async def test_sandbox_pay(tmp_path: Path) -> None:
     plugin = StripeCapsuledPayments(ledger=str(tmp_path / "ledger.jsonl"))
     payer = AgentId("payer-1")
     payee = AgentId("payee-1")

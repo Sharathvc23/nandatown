@@ -11,7 +11,8 @@ Two NANDA layer plugins:
   that seals every completed payment into a capsule. Sandbox/mock by default
   (set ``STRIPE_SECRET_KEY`` for real payments).
 """
-from capsule_emit_nanda.trust import CapsuleEmitTrust
+
 from capsule_emit_nanda.payments import StripeCapsuledPayments
+from capsule_emit_nanda.trust import CapsuleEmitTrust
 
 __all__ = ["CapsuleEmitTrust", "StripeCapsuledPayments"]

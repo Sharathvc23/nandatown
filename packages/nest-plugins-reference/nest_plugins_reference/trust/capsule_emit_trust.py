@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""CapsuleEmitTrust — NANDA Town Trust layer plugin backed by capsule-emit.
+"""CapsuleEmitTrust — NANDA Town trust plugin backed by capsule-emit.
 
 Drop-in replacement for ``agent_receipts``: every interaction a NANDA agent
 already reports via ``ctx.plugins.get("trust").report(...)`` is anchored to
@@ -30,34 +30,68 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
-import capsule_emit
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+import capsule_emit  # type: ignore[import-untyped]
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from nest_core.types import AgentId, Attestation, Claim, Evidence, ReputationScore
+from nest_core.types import AgentId, Attestation, Claim, Evidence, ReputationScore, Signature
 
-# Private helpers from nest-plugins-reference — couples to NANDA internals.
-try:
-    from nest_plugins_reference.trust.agent_receipts import (
-        DEFAULT_CATEGORY_WEIGHTS,
-        _action_field,
-        _counterparty,
-        _effective_receipts,
-        _normalize,
-        _raw_reputation,
-        _verify_receipt,
-        did_for_pubkey,
-        is_corroborated,
-    )
-except ImportError as _exc:
-    raise ImportError(
-        "capsule-emit-nanda requires nest-plugins-reference; "
-        "run: pip install -e examples/capsule-emit"
-    ) from _exc
+from nest_plugins_reference.trust.agent_receipts import (
+    AgentReceiptsTrust,
+    did_for_pubkey,
+    is_corroborated,
+)
 
 logger = logging.getLogger(__name__)
 
 ALGORITHM = "ed25519"
 _DEFAULT_CAPSULE_ACTION = "message_sent"
+
+
+# ---------------------------------------------------------------------------
+# Local helpers — reimplements private agent_receipts helpers to avoid
+# importing underscore-prefixed names across module boundaries.
+# ---------------------------------------------------------------------------
+
+
+def _action_field(receipt: dict[str, Any], key: str) -> Any:
+    action = receipt.get("action")
+    if isinstance(action, dict):
+        return cast("dict[str, Any]", action).get(key)
+    return None
+
+
+def _counterparty(receipt: dict[str, Any]) -> str | None:
+    cp = _action_field(receipt, "counterparty_did")
+    if isinstance(cp, str) and cp and cp != receipt.get("issuer_did"):
+        return cp
+    return None
+
+
+def _verify_receipt(receipt: dict[str, Any]) -> bool:
+    """Return True iff the receipt's issuer Ed25519 signature verifies."""
+    issuer = receipt.get("issuer_did")
+    sig = receipt.get("signature")
+    if not isinstance(issuer, str) or not isinstance(sig, str):
+        return False
+    core: dict[str, Any] = {k: v for k, v in receipt.items() if k != "signature"}
+    evidence = core.get("evidence")
+    if isinstance(evidence, dict):
+        trimmed: dict[str, Any] = {
+            k: v for k, v in cast("dict[str, Any]", evidence).items() if k != "witness_signatures"
+        }
+        if trimmed:
+            core["evidence"] = trimmed
+        else:
+            del core["evidence"]
+    payload = json.dumps(core, sort_keys=True, separators=(",", ":")).encode()
+    try:
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(issuer)).verify(
+            bytes.fromhex(sig), payload
+        )
+    except (InvalidSignature, ValueError, TypeError):
+        return False
+    return True
 
 
 class CapsuleEmitTrust:
@@ -89,10 +123,9 @@ class CapsuleEmitTrust:
         self._anchor = anchor
         self._ledger_path = Path(ledger)
         self._system_seed = hashlib.sha256(b"trust:capsule_emit").digest()[:32]
+        self._base_trust = AgentReceiptsTrust(identity)
         self._receipts: list[dict[str, Any]] = []
         self._anchored: dict[tuple[str, str, str], str] = {}
-        self._fallback_scores: dict[AgentId, list[float]] = {}
-        self._stakes: dict[AgentId, int] = {}
 
     def _did_of(self, agent: AgentId) -> str:
         seed = hashlib.sha256(str(agent).encode()).digest()[:32]
@@ -112,22 +145,17 @@ class CapsuleEmitTrust:
         return (issuer, cp, action_id)
 
     async def report(self, agent: AgentId, evidence: Evidence) -> None:
-        """Report evidence; anchor to capsule ledger if it's a valid receipt."""
+        """Report evidence; anchor to capsule ledger if it is a valid receipt."""
+        await self._base_trust.report(agent, evidence)
         try:
             parsed: object = json.loads(evidence.detail)
         except (json.JSONDecodeError, TypeError):
-            self._record_fallback(agent, evidence)
             return
-
         if not isinstance(parsed, dict):
-            self._record_fallback(agent, evidence)
             return
-
         receipt = cast("dict[str, Any]", parsed)
         if not _verify_receipt(receipt):
-            self._record_fallback(agent, evidence)
             return
-
         self._receipts.append(receipt)
         await asyncio.to_thread(self._emit_capsule, agent, receipt)
 
@@ -136,9 +164,8 @@ class CapsuleEmitTrust:
         category = str(_action_field(receipt, "category") or _DEFAULT_CAPSULE_ACTION)
         cp_did = _counterparty(receipt) or ""
         corroborated = is_corroborated(receipt)
-
         try:
-            result = capsule_emit.emit(
+            result = capsule_emit.emit(  # pyright: ignore[reportUnknownMemberType]
                 action=category,
                 operator=issuer_did,
                 developer=str(agent),
@@ -152,50 +179,32 @@ class CapsuleEmitTrust:
             logger.exception("capsule emit failed for agent=%s", agent)
 
     async def score(self, agent: AgentId) -> ReputationScore:
-        """Reputation from corroborated, ring-severed, anchored receipts."""
+        """Reputation from corroborated, ring-severed, anchored receipts.
+
+        Delegates collusion-ring severance to the base ``AgentReceiptsTrust``,
+        then applies the anchor gate: confidence scales with the fraction of
+        this agent's receipts that were successfully anchored.
+        """
+        base = await self._base_trust.score(agent)
         did = self._did_of(agent)
-        effective = _effective_receipts(self._receipts)
-        mine_eff = [r for r in effective if str(r.get("issuer_did", "")) == did]
-        mine_anchored = [r for r in mine_eff if self._receipt_key(r) in self._anchored]
         mine_all = [r for r in self._receipts if str(r.get("issuer_did", "")) == did]
-
-        if mine_all:
-            raw = _raw_reputation(mine_anchored, DEFAULT_CATEGORY_WEIGHTS)
-            confidence = len(mine_anchored) / len(mine_all)
-            return ReputationScore(
-                agent_id=agent,
-                score=_normalize(raw),
-                confidence=confidence,
-                sample_count=len(mine_all),
-            )
-
-        fallback = self._fallback_scores.get(agent)
-        if fallback:
-            avg = sum(fallback) / len(fallback)
-            return ReputationScore(
-                agent_id=agent,
-                score=avg,
-                confidence=min(1.0, len(fallback) / 100.0),
-                sample_count=len(fallback),
-            )
-        return ReputationScore(agent_id=agent, score=0.5, confidence=0.0, sample_count=0)
+        if not mine_all:
+            return base
+        mine_anchored = [r for r in mine_all if self._receipt_key(r) in self._anchored]
+        anchor_ratio = len(mine_anchored) / len(mine_all)
+        return ReputationScore(
+            agent_id=agent,
+            score=base.score * anchor_ratio,
+            confidence=base.confidence * anchor_ratio,
+            sample_count=base.sample_count,
+        )
 
     async def attest(self, agent: AgentId, claim: Claim) -> Attestation:
-        """Issue an Ed25519-signed attestation (same as agent_receipts)."""
-        from nest_core.types import Signature
-
+        """Issue an Ed25519-signed attestation (same shape as agent_receipts)."""
         sk = Ed25519PrivateKey.from_private_bytes(self._system_seed)
         raw = sk.sign(claim.model_dump_json().encode())
         sig = Signature(signer=self._SYSTEM_AGENT, value=raw, algorithm=ALGORITHM)
         return Attestation(issuer=self._SYSTEM_AGENT, claim=claim, signature=sig)
 
     async def stake(self, agent: AgentId, amount: int) -> None:
-        self._stakes[agent] = self._stakes.get(agent, 0) + amount
-
-    def _record_fallback(self, agent: AgentId, evidence: Evidence) -> None:
-        score_val = 0.5
-        if evidence.kind == "positive":
-            score_val = 1.0
-        elif evidence.kind in ("negative", "byzantine"):
-            score_val = 0.0
-        self._fallback_scores.setdefault(agent, []).append(score_val)
+        await self._base_trust.stake(agent, amount)

@@ -23,17 +23,10 @@ proof the amount was altered after the payment.
 **Sandbox by default**: if ``STRIPE_SECRET_KEY`` is not set, the plugin
 runs a deterministic sandbox that mirrors the real Stripe API shape so
 capsule and verifier logic are identical without any real charges.
-
-Usage in a demo YAML::
-
-    layers:
-      payments: stripe_capsule
-
-Then ``pip install -e examples/capsule-emit``.
-To use real Stripe::
-
-    STRIPE_SECRET_KEY=sk_test_... nest run ./scenario.yaml
 """
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
 
 from __future__ import annotations
 
@@ -42,7 +35,7 @@ import os
 import time
 from typing import Any
 
-import capsule_emit
+import capsule_emit  # type: ignore[import-untyped]
 from nest_core.types import AgentId
 
 _STRIPE_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -77,11 +70,8 @@ class StripeCapsuledPayments:
         amount: float,
         currency: str = "usd",
         **metadata: Any,
-    ) -> dict:
-        """Execute a payment and seal the outcome as a capsule.
-
-        Returns a dict with ``payment_intent_id`` and ``status``.
-        """
+    ) -> dict[str, Any]:
+        """Execute a payment and seal the outcome as a capsule."""
         if _USE_REAL_STRIPE:
             result = _real_stripe_pay(payer, payee, amount, currency)
         else:
@@ -111,34 +101,39 @@ class StripeCapsuledPayments:
         payee: AgentId,
         amount: float,
         currency: str = "usd",
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return a fee quote without executing the payment."""
         return {"amount": amount, "currency": currency, "fee": 0.0}
 
-    async def verify_payment(self, payment_ref: dict) -> bool:
+    async def verify_payment(self, payment_ref: dict[str, Any]) -> bool:
         """Verify that a previously completed payment succeeded."""
         if not _USE_REAL_STRIPE:
             return payment_ref.get("status") == "succeeded"
         try:
-            import stripe  # type: ignore[import]
+            import stripe  # type: ignore[import-untyped]
 
             stripe.api_key = _STRIPE_KEY
             intent = stripe.PaymentIntent.retrieve(payment_ref["payment_intent_id"])
-            return intent.status == "succeeded"
+            return bool(intent.status == "succeeded")
         except Exception:
             return False
 
-    async def refund(self, payment_ref: dict, amount: float | None = None) -> dict:
+    async def refund(
+        self, payment_ref: dict[str, Any], amount: float | None = None
+    ) -> dict[str, Any]:
         """Issue a refund (sandbox: always succeeds)."""
         return {"refunded": True, "amount": amount}
 
 
-def _real_stripe_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict:
+def _real_stripe_pay(
+    payer: AgentId, payee: AgentId, amount: float, currency: str
+) -> dict[str, Any]:
     try:
-        import stripe  # type: ignore[import]
+        import stripe  # type: ignore[import-untyped]
     except ImportError as exc:
         raise ImportError(
-            "pip install capsule-emit-nanda[stripe]  (or unset STRIPE_SECRET_KEY to use sandbox)"
+            "pip install nest-plugins-reference[stripe]"
+            "  (or unset STRIPE_SECRET_KEY to use sandbox)"
         ) from exc
     stripe.api_key = _STRIPE_KEY
     intent = stripe.PaymentIntent.create(
@@ -154,7 +149,7 @@ def _real_stripe_pay(payer: AgentId, payee: AgentId, amount: float, currency: st
     }
 
 
-def _sandbox_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict:
+def _sandbox_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict[str, Any]:
     seed = hashlib.sha256(f"{payer}:{payee}:{amount}:{time.monotonic_ns()}".encode()).hexdigest()[
         :16
     ]
