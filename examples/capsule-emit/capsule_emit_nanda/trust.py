@@ -153,12 +153,36 @@ class CapsuleEmitTrust:
             logger.exception("capsule emit failed for agent=%s", agent)
 
     async def score(self, agent: AgentId) -> ReputationScore:
-        """Reputation from corroborated, ring-severed, anchored receipts."""
+        """Reputation from corroborated, ring-severed, anchored receipts.
+
+        Gate 3 (Anchored) is enforced at score time via ledger re-verification:
+        each receipt's capsule is loaded from the JSONL ledger and
+        ``verify_input_digest`` confirms the sealed digest still matches the
+        current receipt content.  A receipt whose in-memory representation was
+        mutated after sealing fails this check and is excluded — agent_receipts
+        cannot detect this attack because it has no ledger reference.
+        """
         did = self._did_of(agent)
         effective = _effective_receipts(self._receipts)
         mine_eff = [r for r in effective if str(r.get("issuer_did", "")) == did]
-        mine_anchored = [r for r in mine_eff if self._receipt_key(r) in self._anchored]
         mine_all = [r for r in self._receipts if str(r.get("issuer_did", "")) == did]
+
+        # Gate 3: re-verify each anchored receipt against the sealed ledger.
+        ledger_capsules: dict[str, Any] = {}
+        try:
+            for c in capsule_emit.read_ledger(str(self._ledger_path)):
+                ledger_capsules[c["capsule_id"]] = c
+        except Exception:
+            pass
+
+        mine_anchored = [
+            r
+            for r in mine_eff
+            if self._receipt_key(r) in self._anchored
+            and capsule_emit.verify_input_digest(
+                ledger_capsules.get(self._anchored[self._receipt_key(r)], {}), r
+            )
+        ]
 
         if mine_all:
             raw = _raw_reputation(mine_anchored, DEFAULT_CATEGORY_WEIGHTS)
