@@ -103,6 +103,7 @@ pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
+exclude = ["examples"]
 extraPaths = [
     "packages/nest-core",
     "packages/nest-sdk",

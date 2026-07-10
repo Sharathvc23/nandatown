@@ -71,8 +71,9 @@ class CapsuleEmitTrust:
 
     Args:
         identity: Agent identity (passed by the NANDA runtime; may be None).
-        anchor: Whether to anchor capsules to the public log (default False for
-            deterministic replay; set True for the live-anchor pass).
+        anchor: Whether to anchor capsules to the public log (default True; resolves
+            to ``AAC_ANCHOR_URL`` env var or ``https://anchor.agentactioncapsule.org/v1/digest``).
+            Set False to disable anchoring (e.g. for deterministic scored replay).
         ledger: Path for the capsule ledger JSONL file.
     """
 
@@ -82,7 +83,7 @@ class CapsuleEmitTrust:
         self,
         identity: Any = None,
         *,
-        anchor: bool = False,
+        anchor: bool = True,
         ledger: str | Path = "capsule_ledger.jsonl",
     ) -> None:
         self._identity = identity

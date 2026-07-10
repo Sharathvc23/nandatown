@@ -57,14 +57,16 @@ class StripeCapsuledPayments:
     caveats before using in production.
 
     Args:
-        anchor: Whether to anchor capsules to the public log (default False).
+        anchor: Whether to anchor capsules to the public log (default True; resolves
+            to ``AAC_ANCHOR_URL`` env var or ``https://anchor.agentactioncapsule.org/v1/digest``).
+            Set False to disable anchoring.
         ledger: Path for the capsule ledger JSONL file.
     """
 
     def __init__(
         self,
         *,
-        anchor: bool = False,
+        anchor: bool = True,
         ledger: str = "capsule_ledger.jsonl",
     ) -> None:
         self._anchor = anchor
