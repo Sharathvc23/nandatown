@@ -328,6 +328,21 @@ def test_malformed_or_unsigned_heartbeat_is_rejected() -> None:
     assert claimed_peer(b"nope") is None
 
 
+def test_non_finite_timestamp_heartbeat_is_rejected() -> None:
+    """A validly-signed but non-finite (nan/inf) timestamp is rejected.
+
+    ``nan`` would otherwise slip both IEEE-754 freshness comparisons.  The
+    signature here is genuine over the ``nan`` base, so only the explicit
+    finiteness guard rejects it.
+    """
+    ids = _fd_identities()
+    for ts_text in ("nan", "inf", "-inf"):
+        base = f"FDHB|{_VICTIM}|{ts_text}".encode()
+        sig = ids[_VICTIM].sign(base)
+        payload = base + b"|" + sig.value.hex().encode()
+        assert verify_heartbeat(ids[_OBSERVER], payload, last_ts={}, now=10_000.0) is None
+
+
 def _accuracy_probe_events(hb_max: float, gap: float) -> list[dict[str, Any]]:
     """Trace where peer 'p' is reachable, beats at t=200, and is suspected `gap` later."""
 
@@ -384,6 +399,33 @@ def test_accuracy_bound_is_derived_from_config_marker() -> None:
         r.name: r for r in validate_failure_detection_accuracy(_accuracy_probe_events(40.0, 45.0))
     }
     assert ok["failure_detection_accuracy"].passed, ok["failure_detection_accuracy"].detail
+
+
+def test_accuracy_bound_ignores_spoofed_config_from_non_observer() -> None:
+    """A forged fd:config from a non-observer cannot inflate the plausible gap.
+
+    Only the observer (an agent that also emits fd:status) is trusted for the
+    bound.  Here the honest observer marker says hb_max=20 (gap 22), so a
+    60-unit suspicion is a genuine outage and accuracy passes.  A Byzantine
+    ``forger-0`` also broadcasts fd:config with hb_max=1000; if that were
+    trusted the bound would be 1002 and the 60-unit suspicion would be
+    misjudged a false positive and accuracy would fail.
+    """
+    events = _accuracy_probe_events(20.0, 60.0)
+    forged = {
+        "agent": "forger-0",
+        "kind": "broadcast",
+        "ts": 0.0,
+        "msg": json.dumps(
+            {"fd": "config", "hb_max": 1000.0, "verify": True, "ts": 0.0},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+    }
+    results = {r.name: r for r in validate_failure_detection_accuracy([forged, *events])}
+    assert results["failure_detection_accuracy"].passed, results[
+        "failure_detection_accuracy"
+    ].detail
 
 
 # ---------------------------------------------------------------------------

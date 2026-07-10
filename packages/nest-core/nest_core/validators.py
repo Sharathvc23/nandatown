@@ -4131,18 +4131,23 @@ def _parse_fd_record(ev: dict[str, Any]) -> dict[str, Any] | None:
     return cast("dict[str, Any]", obj)
 
 
-def _fd_max_plausible_gap(events: list[dict[str, Any]]) -> float:
+def _fd_max_plausible_gap(events: list[dict[str, Any]], observer_ids: set[str]) -> float:
     """Derive the live-peer plausible-gap bound from the trace itself.
 
     The observer broadcasts one ``fd:config`` marker carrying the scenario's
-    ``hb_max``; the bound is ``hb_max + _GAP_MARGIN``.  Traces without the
-    marker fall back to :data:`_MAX_PLAUSIBLE_GAP`.
+    ``hb_max``; the bound is ``hb_max + _GAP_MARGIN``.  Only a marker emitted by
+    an observer (an agent that also publishes ``fd:status`` verdicts) is
+    trusted, so a Byzantine emitter cannot broadcast a spoofed ``fd:config`` to
+    inflate the bound.  Traces without a trusted marker fall back to
+    :data:`_MAX_PLAUSIBLE_GAP`.
 
     Example::
 
-        gap = _fd_max_plausible_gap(events)
+        gap = _fd_max_plausible_gap(events, _fd_observer_ids(events))
     """
     for ev in events:
+        if ev.get("agent") not in observer_ids:
+            continue
         rec = _parse_fd_record(ev)
         if rec is None or rec.get("fd") != "config":
             continue
@@ -4432,7 +4437,7 @@ def validate_failure_detection_accuracy(
     statuses = _fd_statuses(events)
     observer_ids = _fd_observer_ids(events)
     receipts = _fd_hb_receipts(events, observer_ids)
-    max_gap = _fd_max_plausible_gap(events)
+    max_gap = _fd_max_plausible_gap(events, observer_ids)
     watched = sorted(statuses.keys())
 
     # ----- accuracy: no false suspicion of a provably-live peer -----

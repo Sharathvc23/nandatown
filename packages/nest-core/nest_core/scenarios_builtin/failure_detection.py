@@ -65,6 +65,7 @@ Example::
 from __future__ import annotations
 
 import json
+import math
 from typing import Any, cast
 
 from nest_core.layers.failure_detector import FailureDetector
@@ -193,6 +194,10 @@ def verify_heartbeat(
         ts = float(ts_text)
         sig_bytes = bytes.fromhex(sig_hex)
     except ValueError:
+        return None
+    # A non-finite timestamp (nan/inf) would slip the IEEE-754 comparisons
+    # below, so reject it outright.  Genuine beats always carry ``round(now, 6)``.
+    if not math.isfinite(ts):
         return None
     peer = AgentId(claimed)
     # The signed ts is quantized to 6 dp, so it can round a hair above the
