@@ -39,14 +39,10 @@ from __future__ import annotations
 
 import hashlib
 import os
-import time
 from typing import Any
 
 import capsule_emit
 from nest_core.types import AgentId
-
-_STRIPE_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-_USE_REAL_STRIPE = bool(_STRIPE_KEY)
 
 
 class StripeCapsuledPayments:
@@ -84,8 +80,9 @@ class StripeCapsuledPayments:
 
         Returns a dict with ``payment_intent_id`` and ``status``.
         """
-        if _USE_REAL_STRIPE:
-            result = _real_stripe_pay(payer, payee, amount, currency)
+        stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
+        if stripe_key:
+            result = _real_stripe_pay(payer, payee, amount, currency, stripe_key)
         else:
             result = _sandbox_pay(payer, payee, amount, currency)
 
@@ -119,12 +116,13 @@ class StripeCapsuledPayments:
 
     async def verify_payment(self, payment_ref: dict) -> bool:
         """Verify that a previously completed payment succeeded."""
-        if not _USE_REAL_STRIPE:
+        stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
+        if not stripe_key:
             return payment_ref.get("status") == "succeeded"
         try:
             import stripe  # type: ignore[import]
 
-            stripe.api_key = _STRIPE_KEY
+            stripe.api_key = stripe_key
             intent = stripe.PaymentIntent.retrieve(payment_ref["payment_intent_id"])
             return intent.status == "succeeded"
         except Exception:
@@ -135,14 +133,16 @@ class StripeCapsuledPayments:
         return {"refunded": True, "amount": amount}
 
 
-def _real_stripe_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict:
+def _real_stripe_pay(
+    payer: AgentId, payee: AgentId, amount: float, currency: str, stripe_key: str
+) -> dict:
     try:
         import stripe  # type: ignore[import]
     except ImportError as exc:
         raise ImportError(
             "pip install capsule-emit-nanda[stripe]  (or unset STRIPE_SECRET_KEY to use sandbox)"
         ) from exc
-    stripe.api_key = _STRIPE_KEY
+    stripe.api_key = stripe_key
     intent = stripe.PaymentIntent.create(
         amount=round(amount * 100),
         currency=currency,
@@ -157,9 +157,7 @@ def _real_stripe_pay(payer: AgentId, payee: AgentId, amount: float, currency: st
 
 
 def _sandbox_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict:
-    seed = hashlib.sha256(f"{payer}:{payee}:{amount}:{time.monotonic_ns()}".encode()).hexdigest()[
-        :16
-    ]
+    seed = hashlib.sha256(f"{payer}:{payee}:{amount}:{currency}".encode()).hexdigest()[:16]
     return {
         "payment_intent_id": f"pi_sandbox_{seed}",
         "status": "succeeded",

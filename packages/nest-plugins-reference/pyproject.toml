@@ -23,15 +23,7 @@ dependencies = [
     # Required at runtime, so it lives in the package's hard
     # dependencies — a bare `uv sync` installs it.
     "cryptography>=42.0",
-    # capsule-emit and agent-action-capsule back the CapsuleEmitTrust and
-    # StripeCapsuledPayments plugins (anchor every receipt/payment to a
-    # SCITT-compatible transparency log).
-    "capsule-emit>=0.1.1",
-    "agent-action-capsule>=0.0.3",
 ]
-
-[project.optional-dependencies]
-stripe = ["stripe>=7.0"]
 
 [project.urls]
 Homepage = "https://github.com/projnanda/nandatown"
@@ -43,12 +35,6 @@ Repository = "https://github.com/projnanda/nandatown"
 # install-time discovery path described in CONTRIBUTING.md.
 [project.entry-points."nest.plugins.memory"]
 lww_register = "nest_plugins_reference.memory.lww_register:LwwRegisterMemory"
-
-[project.entry-points."nest.plugins.trust"]
-capsule_emit = "nest_plugins_reference.trust.capsule_emit_trust:CapsuleEmitTrust"
-
-[project.entry-points."nest.plugins.payments"]
-stripe_capsule = "nest_plugins_reference.payments.capsule_emit_payments:StripeCapsuledPayments"
 
 [build-system]
 requires = ["hatchling"]
