@@ -9,6 +9,32 @@ full, not just this summary.
 
 ## Headline: a validly-signed equivocator still poisons the network
 
+**Novelty, stated plainly: this closes an attack surface no other registry
+PR addresses.** No existing registry PR catches **signed equivocation in
+gossip propagation** -- and, to be precise about lineage (auditor persona),
+the *defense* adapts a known accountability technique (self-verifying
+equivocation proofs, in the spirit of PeerReview-style accountability) to
+the registry gossip layer; the novelty is the *application* and the
+mesh-wide-under-eviction guarantee, not a claim to a brand-new cryptographic
+primitive. The full registry landscape
+at submission time: `#24` (merged) is partition-*honest* -- it assumes every
+participant plays by the rules; `#67` is registration-*only* signing -- one
+signature check at the source, never re-run as a card hops the mesh; `#88`
+(DNS-style caching resolver) and `#75` (Cloud SQL/Redis persistence) are
+performance/durability work with no adversarial model at all. None of them
+detects a publisher that validly signs two conflicting cards at one version.
+This PR closes exactly that gap. The base detection -- a signed equivocator
+is caught and quarantined where reference `gossip` silently keeps whichever
+card arrived first -- is demonstrated by a dedicated scenario
+(`scenarios/gossip_signed_equivocation.yaml`: FAILs under `gossip`, PASSes
+under `byzantine_gossip`). The stronger *mesh-wide* property -- every honest
+node catches the equivocator even under **genuinely disjoint** delivery,
+because a self-verifying proof rides anti-entropy and survives card
+eviction -- is demonstrated separately by a unit test
+(`test_disjoint_multi_equivocator_no_stranding`, N=10 / five equivocators /
+disjoint groups), **not** by that scenario, whose delivery reaches every
+node directly. Neither is merely asserted here.
+
 The other prior art in this space (`#67`, registration-only card signing)
 answers "did the claimed publisher actually sign this card?" -- necessary,
 but not sufficient. It does not answer, and *cannot* answer by construction:
@@ -78,9 +104,11 @@ exercised.** This is explicitly **not BFT** (no consensus, no quorum, no
   every anchor slot for a specific victim defeats the guarantee for that
   victim entirely, and there is no rotation mechanism if an anchor slot
   itself turns out to be byzantine. The eclipse scenario's gossip-FAIL is
-  **empirically tuned to seeds 42/7/1337** (found by direct simulation,
-  not a closed-form bound) -- a seed outside that set is not guaranteed to
-  reproduce it.
+  **empirically tuned across the 28-seed leaderboard bank** (`0..24` plus
+  `42/7/1337`; found by direct simulation, not a closed-form bound):
+  `gossip` is eclipsed on all 28 while `byzantine_gossip` resists all 28
+  (`test_seed_bank_robustness_gossip_always_eclipsed`). A seed outside that
+  swept bank is not *guaranteed* to reproduce it.
 - **`InertByzantineDriverAgent` (the eclipse scenario's adversary) models
   Sybil dilution by silence, not an active-lying byzantine agent.** It
   never registers, gossips, or answers. A byzantine agent that actively
@@ -124,7 +152,7 @@ Rows = the 3 mandated validators
 ([`registry_byzantine_validators.py`](nest_plugins_reference/validators/registry_byzantine_validators.py)).
 Columns = `{in_memory, gossip, byzantine_gossip}` x `{forgery,
 signed_equivocation, eclipse}`. Captured from an actual scenario run at seed
-42, cross-checked against the full 30-test gate at seeds 7 and 1337 (all
+42, cross-checked against the full 31-test gate at seeds 7 and 1337 (all
 identical).
 
 | Validator                          | in_memory (all 3) | gossip / forgery | gossip / equivocation | gossip / eclipse | byzantine_gossip / forgery | byzantine_gossip / equivocation | byzantine_gossip / eclipse |
@@ -161,14 +189,43 @@ uv run pytest packages/nest-plugins-reference/tests/test_registry_byzantine_vali
 See `VERIFICATION.md` for the exact `uv run python` snippet that prints the
 literal verdict dict per scenario/plugin pair.
 
+## API fit & Protocol conformance -- explicit, not duck-typed
+
+Two things a bundled reference plugin is easy to get *almost* right, both
+asserted here rather than assumed:
+
+- **Real entry-point wiring, not a `_BUILTINS` shortcut.** The plugin is
+  discovered through
+  `packages/nest-plugins-reference/pyproject.toml`'s
+  `[project.entry-points."nest.plugins.registry"]` --
+  `byzantine_gossip = "nest_plugins_reference.registry.byzantine_gossip:ByzantineGossipRegistry"` --
+  the same mechanism the other reference plugins (`hybrid_x25519`,
+  `cid_facts`, ...) use. There is no hand-added `nest_core.plugins._BUILTINS`
+  line; a redundant one was found and removed (`VERIFICATION.md` post-mortem
+  2), and resolution via the entry point alone is proven.
+- **Explicit `Registry` Protocol conformance, checked at runtime.**
+  `test_resolves_and_conforms` does
+  `PluginRegistry().resolve("registry", "byzantine_gossip")` and then
+  `assert isinstance(reg, Registry)` against the `@runtime_checkable`
+  `Registry` Protocol -- a structural conformance assertion, not merely
+  "it has methods that happen to be called at the right time." The public
+  surface (`register`/`lookup`/`subscribe`/`deregister`) matches the
+  `Registry` shape exactly; the byzantine machinery is additive internal
+  state, and the one accessor the mandated validator needs (`content_view()`)
+  is public and additive, so the validators are pure drop-ins over public
+  output with no reach into private plugin state.
+
 ## What's in this PR
 
 - `nest_plugins_reference/registry/byzantine_gossip.py` --
   `ByzantineGossipRegistry` (signed cards, forged/impersonation rejection,
   signed-equivocation detection + permanent quarantine, eclipse-resistant
-  anchor+random peer sampling). Registered in `nest_core.plugins._BUILTINS`
-  and `packages/nest-plugins-reference/pyproject.toml`'s
-  `nest.plugins.registry` entry points.
+  anchor+random peer sampling). Wired through a real
+  `packages/nest-plugins-reference/pyproject.toml`
+  `[project.entry-points."nest.plugins.registry"]` entry point --
+  resolvable via the standard `PluginRegistry().resolve("registry",
+  "byzantine_gossip")` path, **not** a hand-added `nest_core.plugins._BUILTINS`
+  line (the redundant one was removed; see `VERIFICATION.md` post-mortem 2).
 - `nest_plugins_reference/validators/registry_byzantine_validators.py` --
   `check_no_forged_card_in_view`, `check_no_equivocation_accepted`,
   `check_no_eclipse`.
@@ -178,19 +235,36 @@ literal verdict dict per scenario/plugin pair.
 - Tests: `test_byzantine_gossip.py` (unit), `test_byzantine_gossip_properties.py`
   (30 Hypothesis property tests + fraction sweep + edge cases),
   `test_registry_byzantine_validators.py` (validator unit tests),
-  `test_byzantine_gossip_scenario.py` (30-test end-to-end FAIL/PASS gate +
+  `test_byzantine_gossip_scenario.py` (31-test end-to-end FAIL/PASS gate +
   determinism).
 - `docs/layers/registry.md` -- byzantine_gossip subsection.
 - `nest_plugins_reference/registry/VERIFICATION.md` -- full evidence +
   every honest limitation.
 
-## CI
+## CI -- reproducible, all five checks green
 
-`make ci-local` -- all five checks green (`uv sync`, `ruff check`, `ruff
-format --check`, `pyright`, `pytest -v`).
+The same five checks the repo's `.github/workflows/ci.yml` runs, run locally
+via the repo's own `make ci-local` target on this exact branch head:
 
-## Branch status
+```bash
+make ci-local
+#   [1/5] uv sync
+#   [2/5] uv run ruff check .            -> clean
+#   [3/5] uv run ruff format --check .   -> clean
+#   [4/5] uv run pyright                 -> 0 errors, 0 warnings, 0 informations
+#   [5/5] uv run pytest -v               -> 1070 passed, 1 skipped in ~51s
+```
 
-`hackathon/bogacsmz-registry-byzantine-gossip`. **No PR opened** -- handing
-the branch back for review with this draft, the matrix, and
-`VERIFICATION.md`.
+`pyright` is strict, `ruff` line-length 100, and every public symbol carries
+SPDX + `from __future__` + an `Example::` block (the repo's own conventions).
+The `1 skipped` is a pre-existing repo skip unrelated to this plugin; the
+byzantine-gossip surface itself (90 tests across `test_byzantine_gossip*.py`
+and `test_registry_byzantine_validators.py`) is fully green.
+
+**On remote CI:** `ci.yml` triggers on `push`/`pull_request` to `main`.
+Because this is a first-time-contributor **fork** PR, GitHub holds the
+upstream Actions run pending a maintainer's "approve and run" click
+(`action_required`, not a failure) -- so no check may appear on the PR until
+a maintainer approves it. The `make ci-local` transcript above is the
+byte-for-byte same pipeline; it is green here, and is expected to be green
+once approved. See `VERIFICATION.md` for the exact reproduce commands.

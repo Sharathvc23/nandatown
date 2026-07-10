@@ -50,12 +50,64 @@ byzantine fault tolerance for the registry layer as a whole.
   positives, same-seed determinism (byte-identical canonical-JSON hash), an
   adversarial-fraction sweep (`f/N` up to `floor((N-1)/2)/N` at `N=9`,
   seeds 42/7/1337/`0xDEADBEEF`), and 6 explicit edge cases.
-- **End-to-end scenario gate** -- `test_byzantine_gossip_scenario.py`, 30
+- **End-to-end scenario gate** -- `test_byzantine_gossip_scenario.py`, 31
   tests: each of the three scenario YAMLs run under both `registry: gossip`
   and `registry: byzantine_gossip` (same YAML, same seed, only the plugin
   differs), across seeds 42/7/1337, asserting the FAIL/PASS matrix below
   plus two attack-specific "did the phantom card actually land/not land"
   companion tests and 6 same-seed-identical-trace determinism checks.
+
+## CI evidence (reproducible)
+
+Every claim below is gated by the repo's own five-check pipeline -- the same
+checks `.github/workflows/ci.yml` runs -- reproduced locally on this branch
+head with the repo's `make ci-local` target:
+
+```bash
+make ci-local
+#   [1/5] uv sync
+#   [2/5] uv run ruff check .            -> clean
+#   [3/5] uv run ruff format --check .   -> clean
+#   [4/5] uv run pyright                 -> 0 errors, 0 warnings, 0 informations
+#   [5/5] uv run pytest -v               -> 1070 passed, 1 skipped in ~51s
+```
+
+The `1 skipped` is a pre-existing repo skip unrelated to this plugin. The
+byzantine-gossip surface itself -- 90 tests across `test_byzantine_gossip.py`,
+`test_byzantine_gossip_properties.py`, `test_byzantine_gossip_scenario.py`,
+and `test_registry_byzantine_validators.py` -- is fully green. Remote CI on
+the PR is held pending a maintainer's approval because this is a first-time
+fork PR (`action_required`, not a failure); the pipeline above is the
+byte-identical local run.
+
+## Correctness: edge-case & input-validation guards
+
+Beyond the three headline attacks, the plugin's defensive edges are each
+pinned by a dedicated test (all green in the run above), so "correctness" is
+not just the happy path:
+
+- **Signature/tag integrity, per hop:** missing signature
+  (`test_missing_signature_rejected`), wrong signer
+  (`test_signer_mismatch_rejected`), card mutated in transit
+  (`test_honest_card_mutated_in_transit_rejected`), replay under an inflated
+  version (`test_replay_with_inflated_version_rejected`), tombstone flip
+  (`test_tombstone_flip_rejected`) -- each rejected and reason-coded.
+- **No false positives on honest traffic:** idempotent retransmission
+  (`test_identical_card_retransmission_is_idempotent`), a forger's phantom
+  cards rejected while the honest card at the same id is still accepted
+  (`test_forged_card_rejected_but_honest_accepted`).
+- **Degenerate topologies:** single agent with no peers
+  (`test_edge_single_agent_no_peers`), empty view
+  (`test_edge_empty_view`), all-byzantine-but-one
+  (`test_edge_all_byzantine_but_one`), duplicate registration
+  (`test_edge_duplicate_registration`), tombstone-vs-register race
+  (`test_edge_tombstone_vs_register_race`), and the permanent-quarantine
+  boundary (`test_edge_quarantine_then_honest_recovery`, which pins
+  limitation 4's deliberate "no rehabilitation" behavior).
+
+These are guards, not a formal proof of total correctness -- the honest
+residual gaps (empirical seed/round bounds, the reason-code precision nit)
+are listed under "Honest limitations" below, not hidden here.
 
 ## FAIL/PASS matrix
 
@@ -115,7 +167,7 @@ never signs anything, so a hand-built "reference-style" unsigned card fails
 ### Reproducing the matrix
 
 ```bash
-# The authoritative, committed gate -- 30 tests, all 9 gossip/byzantine_gossip
+# The authoritative, committed gate -- 31 tests, all 9 gossip/byzantine_gossip
 # matrix cells above, across seeds 42, 7, 1337, plus determinism checks:
 uv run pytest packages/nest-plugins-reference/tests/test_byzantine_gossip_scenario.py -v
 
@@ -417,7 +469,7 @@ fixed on this branch without weakening any existing test:
    resolves (`byzantine_gossip = "nest_plugins_reference.registry.byzantine_gossip:ByzantineGossipRegistry"`).
    Removed the `_BUILTINS` line and verified `PluginRegistry().resolve("registry",
    "byzantine_gossip")` still resolves the correct class via the entry
-   point alone, and the full byzantine test suite (98 tests across
+   point alone, and the full byzantine test suite (90 tests across
    `test_byzantine_gossip*.py` and `test_registry_byzantine_validators.py`)
    still passes unchanged. `nest_core/scenarios.py`'s
    `gossip_byzantine_forgery` / `gossip_signed_equivocation` /
