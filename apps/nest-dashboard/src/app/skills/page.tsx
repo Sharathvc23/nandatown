@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { listSkills, type Skill } from "@/lib/skills";
+import { listSkillsCached, type Skill } from "@/lib/skills";
 import { getSessionUser } from "@/lib/auth";
-import { listAllLikes, type SkillLikeSummary } from "@/lib/likes";
+import { listAllLikesCached, type SkillLikeSummary } from "@/lib/likes";
 import { AuthChip } from "./auth-chip";
 import { LikeButton } from "./like-button";
 import { SubmitForm } from "./submit-form";
@@ -74,8 +74,8 @@ export default async function SkillsPage({
   searchParams: Promise<{ auth_error?: string }>;
 }) {
   const [skills, likes, viewer, params] = await Promise.all([
-    listSkills(),
-    listAllLikes(),
+    listSkillsCached(),
+    listAllLikesCached(),
     getSessionUser(),
     searchParams,
   ]);

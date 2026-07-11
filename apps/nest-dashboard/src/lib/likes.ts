@@ -1,5 +1,9 @@
+import { unstable_cache } from "next/cache";
 import { ensureSchema, sql } from "./db";
 import type { SessionUser } from "./auth";
+
+/** Bust with revalidateTag(LIKES_CACHE_TAG) after any like/unlike. */
+export const LIKES_CACHE_TAG = "likes-all";
 
 /** What the public sees about one liker. Subs stay server-side. */
 export interface Liker {
@@ -38,6 +42,16 @@ export async function listAllLikes(): Promise<Record<string, SkillLikeSummary>> 
   }
   return map;
 }
+
+/**
+ * Cached read for the hot paths (/skills page, GET /api/likes) — one Neon
+ * fetch per 30s worst case instead of the full likes table per visitor.
+ * Like/unlike writes bust the tag, so voters still see counts move at once.
+ */
+export const listAllLikesCached = unstable_cache(listAllLikes, [LIKES_CACHE_TAG], {
+  revalidate: 30,
+  tags: [LIKES_CACHE_TAG],
+});
 
 /** Idempotent like. Returns false if the skill doesn't exist. */
 export async function likeSkill(skillId: string, user: SessionUser): Promise<boolean> {

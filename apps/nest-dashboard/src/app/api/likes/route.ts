@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, decodeSession, sameOrigin } from "@/lib/auth";
-import { likeSkill, listAllLikes, listLikers, unlikeSkill } from "@/lib/likes";
+import { revalidateTag } from "next/cache";
+import { LIKES_CACHE_TAG, likeSkill, listAllLikesCached, listLikers, unlikeSkill } from "@/lib/likes";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * Provider subs are intentionally stripped before the response.
  */
 export async function GET() {
-  const all = await listAllLikes();
+  const all = await listAllLikesCached();
   const likes: Record<string, { count: number; likers: { name: string; avatar: string | null }[] }> =
     {};
   for (const [skillId, entry] of Object.entries(all)) {
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
     await unlikeSkill(skillId, user.sub);
   }
 
+  revalidateTag(LIKES_CACHE_TAG, "max");
   // Return the authoritative list so the client never has to guess
   // (display names collide; provider subs stay server-side).
   const likers = await listLikers(skillId);
