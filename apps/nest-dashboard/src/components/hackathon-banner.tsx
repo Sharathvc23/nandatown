@@ -11,10 +11,12 @@ export function HackathonBanner() {
         <span>
           <span className="font-semibold text-cream-50">NandaHack is on.</span>{" "}
           <span className="text-cream-200">
-            <span className="font-semibold text-cream-50">Jul 10, 12 PM ET</span>
-            {" — "}initial SkillMD + Phase 1 PRs due (registers you).{" "}
-            <span className="font-semibold text-cream-50">Jul 11, 2 PM ET</span>
-            {" — "}SkillMDs final + demo video (required for judging, not scored).
+            Final deadline:{" "}
+            <span className="font-semibold text-cream-50">
+              Saturday July 11, 2 PM ET
+            </span>
+            {" — "}finalized SkillMD + demo video (video required for judging,
+            not scored).
           </span>
         </span>
         <span className="flex items-center gap-4">

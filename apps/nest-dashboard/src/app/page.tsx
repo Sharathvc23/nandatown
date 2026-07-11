@@ -172,7 +172,7 @@ export default function Home() {
               </div>
 
               <dl className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-cream-400/70 pt-6 max-w-xl">
-                <EventDate label="Submissions due" value="Fri, Jul 10" hint="12:00 PM ET" />
+                <EventDate label="Final SkillMD + video" value="Sat, Jul 11" hint="2:00 PM ET" />
                 <EventDate label="Summit & finale" value="Sat, Jul 11" hint="MIT Media Lab · optional" />
               </dl>
             </div>

@@ -174,14 +174,14 @@ export default async function HackathonLandingPage() {
                 body: "Build agentic AI apps in the Nanda Town sandbox from anywhere. No Luma registration needed to participate virtually.",
               },
               {
-                label: "Submissions due",
-                date: "Fri, July 10 · 12 PM ET",
-                body: "All submissions close at noon ET. Open a PR with branch hackathon/<handle>-<theme> before the deadline.",
+                label: "Final deadline",
+                date: "Sat, July 11 · 2 PM ET",
+                body: "Finalized SkillMD plus a demo video. The video is required to be considered for judging, but doesn't affect your score.",
               },
               {
                 label: "Summit & finale",
                 date: "Sat, July 11",
-                body: "Nanda Summit at MIT Media Lab. Judging 9:30–noon picks the top 10; demos and sessions 2–5 PM. Optional — attendance doesn't affect scoring.",
+                body: "Nanda Summit at MIT Media Lab. Top-10 demos at 4 PM, results and awards at 5 PM. Optional — attendance doesn't affect scoring.",
               },
             ].map((item) => (
               <div key={item.label} className="bg-cream-50 p-6">

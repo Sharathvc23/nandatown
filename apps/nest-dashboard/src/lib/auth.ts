@@ -5,20 +5,19 @@ import { cookies } from "next/headers";
  * Minimal OAuth session layer for the audience-choice likes.
  *
  * Sessions are HMAC-SHA256-signed cookies (node:crypto only, no extra
- * dependencies). Google and GitHub sign-in run the standard server-side
+ * dependencies). Google sign-in runs the standard server-side
  * authorization-code flow in src/app/api/auth/. Required env:
  *   AUTH_SECRET            random string, signs session cookies
  *   APP_BASE_URL           e.g. https://nandatown.projectnanda.org
  *   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
- *   GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET
  */
 
 export interface SessionUser {
-  /** Stable per-provider id, e.g. "google:1234" or "github:5678". */
+  /** Stable per-provider id, e.g. "google:1234". */
   sub: string;
   name: string;
   avatar: string | null;
-  provider: "google" | "github";
+  provider: "google";
 }
 
 export const SESSION_COOKIE = "nt_session";
@@ -62,7 +61,7 @@ export function decodeSession(token: string | undefined): SessionUser | null {
     const data = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
     if (typeof data.exp !== "number" || data.exp * 1000 < Date.now()) return null;
     if (typeof data.sub !== "string" || typeof data.name !== "string") return null;
-    if (data.provider !== "google" && data.provider !== "github") return null;
+    if (data.provider !== "google") return null;
     return {
       sub: data.sub,
       name: data.name,

@@ -56,7 +56,7 @@ export function LikerAvatar({ name, avatar }: Liker) {
 
 /**
  * Audience-choice heart. Anyone sees the count and can open the list of
- * names; liking requires a Google or GitHub session (bot-proofing).
+ * names; liking requires a Google sign-in (bot-proofing).
  * The server response is authoritative for both count and likers.
  */
 export function LikeButton({
@@ -155,8 +155,7 @@ export function LikeButton({
     }
   }
 
-  const signInHref = (provider: "google" | "github") =>
-    `/api/auth/${provider}?next=${encodeURIComponent("/skills")}`;
+  const signInHref = () => `/api/auth/google?next=${encodeURIComponent("/skills")}`;
 
   return (
     <div className="relative" ref={rootRef}>
@@ -208,16 +207,10 @@ export function LikeButton({
           </p>
           <div className="space-y-1.5">
             <a
-              href={signInHref("google")}
+              href={signInHref()}
               className="flex w-full items-center justify-center gap-2 rounded-full bg-ink-900 px-3 py-2 text-[0.85rem] font-medium text-cream-50 transition-opacity hover:opacity-85"
             >
               Continue with Google
-            </a>
-            <a
-              href={signInHref("github")}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-ink-900 px-3 py-2 text-[0.85rem] font-medium text-ink-900 transition-colors hover:bg-cream-200"
-            >
-              Continue with GitHub
             </a>
           </div>
         </div>

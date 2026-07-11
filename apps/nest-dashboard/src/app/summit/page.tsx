@@ -80,8 +80,7 @@ export default function SummitPage() {
 
       <Section title="Important note for hackathon participants">
         <ul className="list-disc space-y-3 pl-5">
-          <li><strong className="text-ink-900">Friday July 10th, Noon ET</strong> — all submissions must be registered (an initial SkillMD on record plus your Phase 1 PRs).</li>
-          <li><strong className="text-ink-900">Saturday July 11th, 2 pm ET</strong> — the final Phase 2 submission is due, along with a <strong className="text-ink-900">demo video</strong>. The video is required to be considered for scoring, but does not itself affect your score.</li>
+          <li><strong className="text-ink-900">Saturday July 11th, 2 pm ET</strong> — the one deadline that matters: your <strong className="text-ink-900">finalized SkillMD</strong> is due, along with a <strong className="text-ink-900">demo video</strong>. The video is required to be considered for scoring, but does not itself affect your score.</li>
           <li>The hackathon participants are <strong className="text-ink-900">not required to attend</strong> this event, and your <strong className="text-ink-900">score will not be impacted by not attending</strong>. You can still win without being at the event.</li>
           <li>You do NOT need to register on this Luma if you are participating virtually.</li>
           <li>If you are participating for the hackathon sessions in person, each team member must register on this Luma <strong className="text-ink-900">individually</strong> as an acceptance to this event grants individual entry, not team entry.</li>

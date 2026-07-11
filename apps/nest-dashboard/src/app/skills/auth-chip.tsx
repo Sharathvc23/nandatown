@@ -21,12 +21,6 @@ export function AuthChip({ viewer }: Props) {
         >
           Google
         </a>
-        <a
-          href={`/api/auth/github?next=${encodeURIComponent("/skills")}`}
-          className="rounded-full border border-ink-900 px-3.5 py-1.5 text-[0.82rem] font-medium text-ink-900 transition-colors hover:bg-cream-200"
-        >
-          GitHub
-        </a>
       </div>
     );
   }
