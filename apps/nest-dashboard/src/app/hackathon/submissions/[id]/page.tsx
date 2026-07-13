@@ -11,12 +11,7 @@ import { notFound } from "next/navigation";
 import {
   findSubmissionById,
   formatLinesAdded,
-  formatScore,
   loadDataset,
-  SCORE_DIMENSIONS,
-  SCORE_DIMENSION_MAX,
-  SCORE_TOTAL_MAX,
-  type ScoreDimension,
 } from "@/lib/hackathon";
 import { AuthorBadge, StatusBadge } from "@/components/hackathon-card";
 
@@ -38,36 +33,6 @@ export async function generateMetadata({
   };
 }
 
-function ScoreBar({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null;
-}) {
-  // Dimensions are scored 1-5 per the rubric in scripts/judge/rubric.md;
-  // the bar fills proportionally against SCORE_DIMENSION_MAX (5).
-  const width =
-    value === null
-      ? 0
-      : Math.min(100, Math.max(0, (value / SCORE_DIMENSION_MAX) * 100));
-  return (
-    <div>
-      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
-        <span>{label}</span>
-        <span className="tabular-nums text-ink-900">
-          {value === null ? "—" : `${value.toFixed(0)}/${SCORE_DIMENSION_MAX}`}
-        </span>
-      </div>
-      <div className="mt-2 h-1 w-full rounded-full bg-cream-300 overflow-hidden">
-        <div
-          className="h-1 rounded-full bg-rust"
-          style={{ width: `${width}%` }}
-        />
-      </div>
-    </div>
-  );
-}
 
 export default async function SubmissionPage({
   params,
@@ -81,9 +46,7 @@ export default async function SubmissionPage({
     notFound();
   }
 
-  const score = sub.score;
   const layer = data.layers.find((l) => l.key === sub.layer);
-  const totalScore = score?.total ?? null;
 
   return (
     <div className="bg-cream-100">
@@ -189,54 +152,6 @@ export default async function SubmissionPage({
         </div>
       </section>
 
-      {/* Judge score breakdown */}
-      <section className="border-b border-cream-400/70">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-12 grid gap-10 lg:grid-cols-[1fr_2fr]">
-          <div>
-            <p className="eyebrow">Judge score</p>
-            <h2 className="mt-4 font-display text-[1.8rem] leading-[1.1] text-ink-900">
-              {totalScore !== null ? (
-                <>
-                  <span className="tabular-nums">
-                    {formatScore(totalScore)}
-                  </span>
-                  <span className="text-ink-300"> / {SCORE_TOTAL_MAX}</span>
-                </>
-              ) : (
-                <span className="italic text-ink-400">unscored</span>
-              )}
-            </h2>
-            {totalScore === null && (
-              <p className="mt-3 text-[0.92rem] text-ink-500 max-w-xs">
-                Judging in progress. Scores publish to{" "}
-                <code className="font-mono text-[0.8rem] bg-cream-200 px-1 rounded">
-                  docs/hackathon/scores.json
-                </code>{" "}
-                and rebuild this page within five minutes.
-              </p>
-            )}
-            {score?.notes && (
-              <p className="mt-4 text-[0.92rem] leading-[1.55] text-ink-500 italic max-w-md">
-                &ldquo;{score.notes}&rdquo;
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-cream-400/70 bg-cream-50 p-7 grid gap-6 md:grid-cols-2">
-            {SCORE_DIMENSIONS.map(({ key, label }) => (
-              <ScoreBar
-                key={key}
-                label={label}
-                value={
-                  score
-                    ? (score[key as ScoreDimension] as number | null)
-                    : null
-                }
-              />
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Body + links */}
       <section>

@@ -6,7 +6,7 @@
  */
 
 import Link from "next/link";
-import { formatScore, loadDataset } from "@/lib/hackathon";
+import { loadDataset } from "@/lib/hackathon";
 
 // Render at request time; the GitHub data layer is cached by
 // unstable_cache, so this never re-fetches per request but also never bakes
@@ -83,18 +83,6 @@ export default async function HackathonLayersPage() {
                   {layer.blurb}
                 </p>
 
-                <div className="mt-5 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
-                  <span>
-                    {layer.is_open ? "open for submissions" : "top score"}
-                  </span>
-                  <span className="tabular-nums text-ink-700">
-                    {layer.is_open
-                      ? "—"
-                      : layer.top_score !== null
-                        ? formatScore(layer.top_score)
-                        : "unscored"}
-                  </span>
-                </div>
               </Link>
             ))}
           </div>

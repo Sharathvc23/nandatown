@@ -9,8 +9,6 @@ import Link from "next/link";
 import type { Submission } from "@/lib/hackathon-types";
 import {
   formatLinesAdded,
-  formatScore,
-  SCORE_TOTAL_MAX,
 } from "@/lib/hackathon-types";
 
 export function AuthorBadge({ submission }: { submission: Submission }) {
@@ -62,27 +60,6 @@ export function StatusBadge({ submission }: { submission: Submission }) {
   );
 }
 
-export function ScoreBadge({ submission }: { submission: Submission }) {
-  const total = submission.score?.total ?? null;
-  return (
-    <span
-      className={
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-[0.18em] border " +
-        (total !== null
-          ? "bg-cream-50 text-ink-900 border-cream-400/70"
-          : "bg-cream-200 text-ink-400 border-cream-400/40")
-      }
-      title={
-        total !== null
-          ? `Judge score: ${formatScore(total)} / ${SCORE_TOTAL_MAX}`
-          : "Unscored — judging in progress"
-      }
-    >
-      <span className="text-ink-300">score</span>
-      <span className="tabular-nums text-ink-900">{formatScore(total)}</span>
-    </span>
-  );
-}
 
 export function SubmissionCard({ submission }: { submission: Submission }) {
   return (

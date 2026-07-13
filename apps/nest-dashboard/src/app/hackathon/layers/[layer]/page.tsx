@@ -58,13 +58,9 @@ export default async function LayerPage({
                 </dd>
               </div>
               <div>
-                <dt>Top score</dt>
+                <dt>Merged</dt>
                 <dd className="mt-2 font-display text-[1.6rem] leading-none text-ink-900 tabular-nums">
-                  {meta.top_score !== null
-                    ? meta.top_score.toFixed(1)
-                    : subs.length === 0
-                      ? "—"
-                      : "unscored"}
+                  {subs.filter((s) => s.state === "merged").length}
                 </dd>
               </div>
             </dl>
