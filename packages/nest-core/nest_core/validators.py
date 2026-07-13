@@ -26,6 +26,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 
 class ValidationResult:
     """Result of a protocol validation check."""
@@ -1962,11 +1965,68 @@ def _receipt_digest(receipt: dict[str, Any]) -> str:
     return hashlib.sha256(_jcs_value(_normalize_absent(receipt)).encode("utf-8")).hexdigest()
 
 
+def _issuer_signed_payload(receipt: dict[str, Any]) -> bytes:
+    """Sorted-key compact-JSON bytes the issuer signs: receipt minus signatures.
+
+    Mirrors the trust plugin's ``_issuer_payload`` (drop top-level ``signature``
+    and ``evidence.witness_signatures``) so the validator verifies the exact same
+    bytes the issuer signed.  This is the *signing* canonicalization (plain
+    sorted-key JSON), which is distinct from the RFC 8785 JCS form used for the
+    ledger *digest* -- the plugin uses both, so the validator must too.
+
+    Example::
+
+        payload = _issuer_signed_payload({"issuer_did": "ab", "signature": "cd"})
+    """
+    core: dict[str, Any] = {k: v for k, v in receipt.items() if k != "signature"}
+    evidence = core.get("evidence")
+    if isinstance(evidence, dict):
+        trimmed: dict[str, Any] = {
+            k: v for k, v in cast("dict[str, Any]", evidence).items() if k != "witness_signatures"
+        }
+        if trimmed:
+            core["evidence"] = trimmed
+        else:
+            core.pop("evidence", None)
+    return json.dumps(core, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def _verify_receipt_signature(receipt: dict[str, Any]) -> bool:
+    """Return whether the receipt's issuer Ed25519 signature verifies; never raises.
+
+    ``issuer_did`` is the hex of the raw 32-byte Ed25519 public key; ``signature``
+    is the hex signature over :func:`_issuer_signed_payload`.  Reimplemented here
+    (not imported from the example plugin) so the validator's "valid receipt" set
+    matches exactly what a signature-checking trust plugin anchors -- an
+    unsigned/forged ``receipt:`` line injected into a trace is therefore correctly
+    ignored instead of demanded-anchored.
+
+    Example::
+
+        ok = _verify_receipt_signature(receipt)
+    """
+    issuer = receipt.get("issuer_did")
+    sig = receipt.get("signature")
+    if not isinstance(issuer, str) or not isinstance(sig, str):
+        return False
+    try:
+        pub = bytes.fromhex(issuer)
+        sig_bytes = bytes.fromhex(sig)
+        Ed25519PublicKey.from_public_bytes(pub).verify(sig_bytes, _issuer_signed_payload(receipt))
+    except (InvalidSignature, ValueError, TypeError):
+        return False
+    return True
+
+
 def _collect_receipts(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Parse every well-formed ``receipt:`` line into a receipt dict (dedup by identity).
+    """Parse every ``receipt:`` line with a valid issuer signature into a receipt dict.
 
     Both the issuer's ``send`` and the auditor's ``receive`` carry the same bytes;
     de-duplicating on the canonical digest keeps one copy of each distinct receipt.
+    Lines whose issuer Ed25519 signature does not verify are skipped, so the
+    validator's "valid receipt" set matches what a signature-checking trust plugin
+    actually anchors -- an injected unsigned/forged ``receipt:`` line cannot make
+    the anchoring check demand something the plugin never sealed.
 
     Example::
 
@@ -1986,6 +2046,8 @@ def _collect_receipts(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not isinstance(parsed, dict):
             continue
         receipt = cast("dict[str, Any]", parsed)
+        if not _verify_receipt_signature(receipt):
+            continue
         try:
             digest = _receipt_digest(receipt)
         except (TypeError, ValueError):

@@ -136,3 +136,123 @@ async def test_gate3_tampered_receipt_excluded_from_score(tmp_path: Path) -> Non
     score_after = await plugin.score(agent)
     assert score_after.score == 0.0, "Gate 3 must exclude tampered receipt from reputation"
     assert score_after.confidence == 0.0
+
+
+@pytest.mark.asyncio
+async def test_float_bearing_receipt_does_not_crash_score(tmp_path: Path) -> None:
+    """B2: a receipt carrying a raw float must never crash score().
+
+    ``json_digest`` raises ``FloatInDigestError`` (a ``ValueError``) on a raw
+    float. Two independent guards keep that raise from taking down the run:
+
+    * ``_emit_capsule`` narrows its ``except`` so a float that breaks ``emit()``
+      is counted and skipped (the receipt is simply not anchored); and
+    * ``_verify_anchored`` wraps the Gate-3 ``verify_input_digest`` call so a
+      raise there is treated as "not verified" and excluded.
+
+    Either way, reporting a valid, corroborated, *float-bearing* receipt and then
+    scoring the agent must return cleanly rather than propagate the exception.
+    """
+    import hashlib
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    from nest_plugins_reference.trust.agent_receipts import (
+        cosign_receipt,
+        did_for_pubkey,
+        sign_receipt,
+    )
+
+    issuer_seed = hashlib.sha256(b"floaty-agent").digest()[:32]
+    cp_seed = hashlib.sha256(b"floaty-cp").digest()[:32]
+    issuer_pub = (
+        Ed25519PrivateKey.from_private_bytes(issuer_seed)
+        .public_key()
+        .public_bytes(Encoding.Raw, PublicFormat.Raw)
+    )
+    cp_pub = (
+        Ed25519PrivateKey.from_private_bytes(cp_seed)
+        .public_key()
+        .public_bytes(Encoding.Raw, PublicFormat.Raw)
+    )
+    # A valid, corroborated receipt that carries a raw float in its action.
+    receipt: dict[str, Any] = {
+        "issuer_did": did_for_pubkey(issuer_pub),
+        "action": {
+            "category": "purchase",
+            "amount": 19.99,  # raw float -> FloatInDigestError in the digest path
+            "counterparty_did": did_for_pubkey(cp_pub),
+        },
+    }
+    receipt = sign_receipt(receipt, issuer_seed=issuer_seed)
+    receipt = cosign_receipt(receipt, counterparty_seed=cp_seed)
+
+    plugin = CapsuleEmitTrust(anchor=False, ledger=tmp_path / "ledger.jsonl")
+    agent = AgentId("floaty-agent")
+    ev = Evidence(
+        reporter=AgentId("floaty-cp"),
+        subject=agent,
+        kind="positive",
+        detail=json.dumps(receipt),
+    )
+    await plugin.report(agent, ev)  # must not raise despite the float
+
+    # Must NOT raise; the float-bearing receipt cannot be digest-verified so it is
+    # excluded, and score() returns cleanly.
+    score = await plugin.score(agent)
+    assert 0.0 <= score.score <= 1.0
+    assert score.score == 0.0, "a receipt that cannot be digest-verified must not build reputation"
+
+
+@pytest.mark.asyncio
+async def test_multiple_receipts_same_pair_same_category_all_anchored(tmp_path: Path) -> None:
+    """H2: several receipts between the same pair in the same category all count.
+
+    ``_anchored`` is keyed by each receipt's content digest, so repeated
+    same-issuer/same-counterparty/same-category receipts no longer overwrite one
+    another and drop from Gate 3. With three such receipts, Gate-3 confidence must
+    be 1.0 (all three anchored) — not 1/3 as it would be under the old
+    ``(issuer, counterparty, category)`` key.
+    """
+    import hashlib
+
+    issuer_seed = hashlib.sha256(b"repeat-agent").digest()[:32]
+    cp_seed = hashlib.sha256(b"repeat-cp").digest()[:32]
+    agent = AgentId("repeat-agent")
+
+    plugin = CapsuleEmitTrust(anchor=False, ledger=tmp_path / "ledger.jsonl")
+
+    # Three distinct receipts, same pair, same category ("purchase"), no action_id
+    # (mirrors the scenario's receipts) — distinguished only by a per-receipt nonce.
+    for n in range(3):
+        receipt = _make_corroborated_receipt(issuer_seed, cp_seed, action_id=f"nonce-{n}")
+        # Drop action_id so the pair+category are identical across all three; keep a
+        # distinguishing field so each receipt's content digest still differs.
+        del receipt["action"]["action_id"]
+        receipt["action"]["nonce"] = n
+        # Re-sign after editing so the signature covers the final content.
+        from nest_plugins_reference.trust.agent_receipts import (
+            cosign_receipt,
+            sign_receipt,
+        )
+
+        base = {k: v for k, v in receipt.items() if k not in ("signature", "evidence")}
+        signed = sign_receipt(base, issuer_seed=issuer_seed)
+        receipt = cosign_receipt(signed, counterparty_seed=cp_seed)
+
+        ev = Evidence(
+            reporter=AgentId("repeat-cp"),
+            subject=agent,
+            kind="positive",
+            detail=json.dumps(receipt),
+        )
+        await plugin.report(agent, ev)
+
+    assert len(plugin.receipts) == 3
+    score = await plugin.score(agent)
+    assert score.sample_count == 3
+    # All three are anchored and survive Gate 3 -> full confidence.
+    assert score.confidence == pytest.approx(1.0), (
+        "all same-pair/same-category receipts must remain anchored (no key collision)"
+    )
+    assert score.score > 0.0

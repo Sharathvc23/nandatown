@@ -7,7 +7,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
-    "capsule-emit>=0.1.1",
+    "capsule-emit>=0.3.2",
     "agent-action-capsule>=0.0.3",
     "nest-core>=0.1.4",
     "nest-plugins-reference>=0.1.1",

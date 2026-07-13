@@ -157,6 +157,10 @@ def test_validator_fails_on_tampered_receipt(tmp_path: Path, monkeypatch: Any) -
 
     The ledger is sealed against the original receipts; the trace then carries one
     receipt whose ``action.category`` was changed post-seal (the Gate-3 attack).
+    The mutation is *re-signed* with the original issuer/counterparty keys, so the
+    tampered receipt still carries a valid Ed25519 signature (the validator now
+    verifies signatures, so a merely-stale signature would be discarded before the
+    digest check) -- but its content digest no longer matches any sealed capsule.
     ``agent_receipts`` cannot detect this -- it has no ledger reference -- but the
     anchoring validator does.
     """
@@ -164,8 +168,18 @@ def test_validator_fails_on_tampered_receipt(tmp_path: Path, monkeypatch: Any) -
     ledger = tmp_path / "capsule_ledger.jsonl"
     _write_ledger(ledger, receipts)  # sealed against the pristine receipts
 
-    tampered = [json.loads(json.dumps(r)) for r in receipts]
-    tampered[0]["action"]["category"] = "premium_purchase"  # mutate after sealing
+    # Re-build receipt[0] with a mutated category, freshly signed with the same
+    # keys _build_receipts used (issuer seeds[0], counterparty seeds[1]).
+    seeds = [bytes([i]) * 32 for i in range(1, 5)]
+    tampered0: dict[str, Any] = {
+        "receipt_id": "honest-0->honest-1",
+        "issuer_did": _did(seeds[0]),
+        "action": {"category": "premium_purchase", "counterparty_did": _did(seeds[1])},
+    }
+    signed = sign_receipt(tampered0, issuer_seed=seeds[0])
+    tampered0 = cosign_receipt(signed, counterparty_seed=seeds[1])
+
+    tampered = [tampered0, receipts[1], receipts[2]]
     trace = tmp_path / "trace.jsonl"
     _write_trace(trace, _trace_events(tampered))
 
@@ -186,3 +200,39 @@ def test_validator_fails_when_no_receipts(tmp_path: Path, monkeypatch: Any) -> N
     result = _anchored_result(trace)
     assert not result.passed
     assert "no receipts" in result.detail
+
+
+def test_validator_ignores_invalid_signature_receipt_line(tmp_path: Path, monkeypatch: Any) -> None:
+    """An injected receipt line with a bad issuer signature is ignored -> still PASS (H1).
+
+    A hostile reviewer can splice an extra ``receipt:`` line into the trace whose
+    issuer signature does not verify. The trust plugin never anchors it (it fails
+    Gate 1), so the validator must not demand it be anchored -- otherwise a
+    faithful, fully-anchored run would FAIL. ``_collect_receipts`` verifies the
+    Ed25519 issuer signature, so the forged line is dropped and the run PASSES.
+    """
+    receipts = _build_receipts()
+    trace_events = _trace_events(receipts)
+
+    # Splice in a forged receipt: valid shape, but the signature is garbage, so it
+    # was never anchored by the plugin. It must not force the anchoring check to fail.
+    forged: dict[str, Any] = {
+        "receipt_id": "forged->victim",
+        "issuer_did": _did(bytes([9]) * 32),
+        "action": {"category": "purchase", "counterparty_did": _did(bytes([10]) * 32)},
+        "signature": "00" * 64,  # not a valid signature over the issuer payload
+    }
+    trace_events.insert(
+        1,
+        {"agent": "attacker", "kind": "send", "msg": "receipt:" + json.dumps(forged), "ts": 0.5},
+    )
+
+    trace = tmp_path / "trace.jsonl"
+    ledger = tmp_path / "capsule_ledger.jsonl"
+    _write_trace(trace, trace_events)
+    _write_ledger(ledger, receipts)  # only the genuine receipts are sealed
+
+    monkeypatch.setenv("AAC_CAPSULE_LEDGER", str(ledger))
+    result = _anchored_result(trace)
+    assert result.passed, result.detail
+    assert "anchored" in result.detail

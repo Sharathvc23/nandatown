@@ -91,9 +91,13 @@ class StripeCapsuledPayments:
     caveats before using in production.
 
     Args:
-        anchor: Whether to anchor capsules to the public log (default True; resolves
-            to ``AAC_ANCHOR_URL`` env var or ``https://anchor.agentactioncapsule.org/v1/digest``).
-            Set False to disable anchoring.
+        anchor: Whether to anchor capsules to the public log. **Defaults to
+            ``False``** — the graded/replay run keeps anchoring off so the ledger
+            is written deterministically offline (no network). Flip to
+            ``anchor=True`` to additionally POST each capsule's digest to the free
+            public anchor ``https://anchor.agentactioncapsule.org/v1/digest`` with
+            zero config (that is the built-in default endpoint in
+            ``agent_action_capsule.anchor``; override via ``AAC_ANCHOR_URL``).
         ledger: Path for the capsule ledger JSONL file.
     """
 
@@ -195,9 +199,7 @@ def _real_stripe_pay(
     }
 
 
-def _sandbox_pay(
-    payer: AgentId, payee: AgentId, amount: float, currency: str
-) -> dict[str, Any]:
+def _sandbox_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict[str, Any]:
     seed = hashlib.sha256(f"{payer}:{payee}:{amount}:{currency}".encode()).hexdigest()[:16]
     return {
         "payment_intent_id": f"pi_sandbox_{seed}",
