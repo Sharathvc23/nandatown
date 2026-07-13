@@ -43,7 +43,10 @@ layers:
   datafacts: datafacts_v1
 
 task:
-  type: receipt_reputation
+  # Own scenario type so the anchoring validator grades ONLY this capsule
+  # scenario, never the stock receipt_reputation scenario. The task mechanics
+  # are identical to receipt_reputation (ring/byzantine/auditor roles).
+  type: receipt_reputation_capsule
   config:
     ring_size: 4
     byzantine_fraction: 0.10

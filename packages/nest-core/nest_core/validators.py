@@ -2247,6 +2247,15 @@ VALIDATORS: dict[str, list[Any]] = {
     "receipt_reputation": [
         validate_receipt_reputation_ring_severed,
         validate_receipt_reputation_honest_confidence,
+    ],
+    # Capsule variant: the same ring-severance + honest-confidence checks as
+    # ``receipt_reputation``, plus the anchoring check that a non-anchoring
+    # trust layer (e.g. ``agent_receipts``) cannot satisfy. Scoped to its own
+    # scenario type so ``validate_receipt_reputation_anchored`` NEVER grades the
+    # stock ``receipt_reputation`` scenario (which has no capsule ledger).
+    "receipt_reputation_capsule": [
+        validate_receipt_reputation_ring_severed,
+        validate_receipt_reputation_honest_confidence,
         validate_receipt_reputation_anchored,
     ],
 }

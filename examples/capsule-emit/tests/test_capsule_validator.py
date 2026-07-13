@@ -3,7 +3,8 @@
 the CapsuleEmitTrust anchoring property.
 
 The validator lives in ``nest_core.validators`` and is registered under
-``VALIDATORS["receipt_reputation"]``, so the Nanda rig actually runs it via
+``VALIDATORS["receipt_reputation_capsule"]`` (its own scenario type, so it never
+grades the stock ``receipt_reputation`` scenario), so the Nanda rig runs it via
 ``validate_trace``. These tests exercise it end-to-end against fixtures built the
 same way the scenario builds receipts, proving:
 
@@ -33,7 +34,7 @@ from nest_plugins_reference.trust.agent_receipts import (
     sign_receipt,
 )
 
-_SCENARIO = "receipt_reputation"
+_SCENARIO = "receipt_reputation_capsule"
 
 
 def _did(seed: bytes) -> str:
