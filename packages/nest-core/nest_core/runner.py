@@ -165,6 +165,9 @@ class ScenarioRunner:
             message_drop_rate=failures.message_drop,
             byzantine_fraction=failures.byzantine_agents,
             partition_groups=partition_groups,
+            partition_heal_at=failures.partition_heal_at_tick,
+            partition_start_at_time=failures.partition_start_at_time,
+            partition_heal_at_time=failures.partition_heal_at_time,
             plugins=plugins,
         )
 
