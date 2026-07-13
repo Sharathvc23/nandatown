@@ -23,6 +23,10 @@ dependencies = [
     "nest-shell",
     "nest-plugins-reference",
     "nest-marketplace",
+    # Hackathon example plugin: a workspace member declared as a root dep so a
+    # stock `uv sync` installs it and registers its nest.plugins.* entry points
+    # (mirrors nest-plugins-reference; the scenario must run with no out-of-band install).
+    "capsule-emit-nanda",
 ]
 
 [project.optional-dependencies]
@@ -90,6 +94,7 @@ nest-scenarios = { workspace = true }
 nest-shell = { workspace = true }
 nest-plugins-reference = { workspace = true }
 nest-marketplace = { workspace = true }
+capsule-emit-nanda = { workspace = true }
 
 [tool.ruff]
 target-version = "py312"
