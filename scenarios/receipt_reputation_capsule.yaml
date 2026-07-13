@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Identical to receipt_reputation.yaml but with trust: capsule_emit.
 #
-# Requires: pip install -e examples/capsule-emit
-#
 # Demonstrates that CapsuleEmitTrust (from capsule-emit-nanda) produces identical
 # ring-severance results to agent_receipts while also writing a verifiable
 # capsule ledger:

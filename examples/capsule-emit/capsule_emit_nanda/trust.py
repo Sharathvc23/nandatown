@@ -23,7 +23,6 @@ in any scenario.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -83,7 +82,7 @@ class CapsuleEmitTrust:
         self,
         identity: Any = None,
         *,
-        anchor: bool = True,
+        anchor: bool = False,
         ledger: str | Path = "capsule_ledger.jsonl",
     ) -> None:
         self._identity = identity
@@ -130,7 +129,7 @@ class CapsuleEmitTrust:
             return
 
         self._receipts.append(receipt)
-        await asyncio.to_thread(self._emit_capsule, agent, receipt)
+        self._emit_capsule(agent, receipt)
 
     def _emit_capsule(self, agent: AgentId, receipt: dict[str, Any]) -> None:
         issuer_did = str(receipt.get("issuer_did", ""))

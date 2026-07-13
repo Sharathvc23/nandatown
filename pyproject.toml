@@ -64,6 +64,7 @@ members = [
     "packages/nest-shell",
     "packages/nest-plugins-reference",
     "packages/nest-marketplace",
+    "examples/capsule-emit",
 ]
 
 [tool.uv]
@@ -103,7 +104,6 @@ pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
-exclude = ["examples"]
 extraPaths = [
     "packages/nest-core",
     "packages/nest-sdk",
@@ -113,12 +113,13 @@ extraPaths = [
     "packages/nest-shell",
     "packages/nest-plugins-reference",
     "packages/nest-marketplace",
+    "examples/capsule-emit",
     ".",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["packages", "scripts"]
+testpaths = ["packages", "scripts", "examples/capsule-emit"]
 addopts = ["--import-mode=importlib", "-m", "not live"]
 pythonpath = ["."]
 markers = [

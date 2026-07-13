@@ -62,7 +62,7 @@ class StripeCapsuledPayments:
     def __init__(
         self,
         *,
-        anchor: bool = True,
+        anchor: bool = False,
         ledger: str = "capsule_ledger.jsonl",
     ) -> None:
         self._anchor = anchor
