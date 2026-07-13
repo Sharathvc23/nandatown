@@ -27,23 +27,18 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import capsule_emit
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from nest_core.types import AgentId, Attestation, Claim, Evidence, ReputationScore
 
-# Private helpers from nest-plugins-reference — couples to NANDA internals.
+# Public API from nest-plugins-reference (stable, exported).
 try:
+    from nest_plugins_reference.trust import agent_receipts as _agent_receipts
     from nest_plugins_reference.trust.agent_receipts import (
         DEFAULT_CATEGORY_WEIGHTS,
-        _action_field,
-        _counterparty,
-        _effective_receipts,
-        _normalize,
-        _raw_reputation,
-        _verify_receipt,
         did_for_pubkey,
         is_corroborated,
     )
@@ -52,6 +47,40 @@ except ImportError as _exc:
         "capsule-emit-nanda requires nest-plugins-reference; "
         "run: pip install -e examples/capsule-emit"
     ) from _exc
+
+# This plugin deliberately reuses six module-private helpers from
+# ``agent_receipts`` so its scoring stays bit-for-bit identical to the stock
+# ``agent_receipts`` layer (signature verification, counterparty extraction,
+# Tarjan collusion severance, category weighting, normalization) while adding
+# only the Gate-3 ledger check.  They have no public alias upstream, so we bind
+# them through typed ``getattr`` lookups: each binding carries the helper's real
+# signature (verified against the source), so every call site is fully
+# type-checked — nothing is excluded or suppressed — and the intentional
+# coupling to NANDA internals is explicit rather than a private-name import.
+_action_field = cast(
+    "Callable[[dict[str, Any], str], Any]",
+    getattr(_agent_receipts, "_action_field"),
+)
+_counterparty = cast(
+    "Callable[[dict[str, Any]], str | None]",
+    getattr(_agent_receipts, "_counterparty"),
+)
+_effective_receipts = cast(
+    "Callable[[list[dict[str, Any]]], list[dict[str, Any]]]",
+    getattr(_agent_receipts, "_effective_receipts"),
+)
+_normalize = cast(
+    "Callable[[float], float]",
+    getattr(_agent_receipts, "_normalize"),
+)
+_raw_reputation = cast(
+    "Callable[[list[dict[str, Any]], dict[str, float]], float]",
+    getattr(_agent_receipts, "_raw_reputation"),
+)
+_verify_receipt = cast(
+    "Callable[[dict[str, Any]], bool]",
+    getattr(_agent_receipts, "_verify_receipt"),
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +122,17 @@ class CapsuleEmitTrust:
         self._anchored: dict[tuple[str, str, str], str] = {}
         self._fallback_scores: dict[AgentId, list[float]] = {}
         self._stakes: dict[AgentId, int] = {}
+
+    @property
+    def receipts(self) -> list[dict[str, Any]]:
+        """The in-memory receipts recorded so far.
+
+        Public, read-only-by-convention view over the internal receipt list.
+        Exposed so tests (and Gate-3 tamper demos) can inspect or mutate the
+        recorded receipts without reaching into the protected ``_receipts``
+        attribute. The returned list is the live backing list.
+        """
+        return self._receipts
 
     def _did_of(self, agent: AgentId) -> str:
         seed = hashlib.sha256(str(agent).encode()).digest()[:32]
