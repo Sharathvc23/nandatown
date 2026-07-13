@@ -95,6 +95,26 @@ async def test_sandbox_pay_is_deterministic(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_sandbox_pay_float_amount_seals_verifiable_capsule(tmp_path: Path) -> None:
+    """A float USD amount must still produce a sealed capsule.
+
+    capsule_emit 0.3.2 fails closed on a raw float (§5.1), so the plugin
+    canonicalizes money to exact decimal strings before sealing. This proves
+    emit() did not fail closed and the payment was recorded to the ledger.
+    """
+    import capsule_emit
+
+    led = tmp_path / "ledger.jsonl"
+    plugin = StripeCapsuledPayments(ledger=str(led), anchor=False)
+    result = await plugin.pay(AgentId("p"), AgentId("q"), 19.99)
+    assert result["amount_received"] == pytest.approx(19.99)  # caller still gets a float
+    capsules = capsule_emit.read_ledger(str(led))
+    assert len(capsules) == 1
+    ca = capsules[0]["model_attestation"]["compute_attestation"]
+    assert len(ca["agent_input_digest"]) == 64  # sealed despite the float amount
+
+
+@pytest.mark.asyncio
 async def test_gate3_tampered_receipt_excluded_from_score(tmp_path: Path) -> None:
     """Gate 3 fires: agent_receipts accepts a mutated record; CapsuleEmitTrust rejects it.
 

@@ -46,6 +46,28 @@ import capsule_emit
 from nest_core.types import AgentId
 
 
+def _seal_safe(value: Any) -> Any:
+    """Encode floats as exact 2-decimal strings for §5.1-safe sealing.
+
+    A raw JSON float cannot be reproducibly digested (RFC 8785 / §5.1), so
+    ``capsule_emit.emit`` fails closed on one. Monetary values reach this plugin
+    as ``float`` USD; we commit them to the capsule as exact decimal strings
+    (recursively, for nested payment results) so the ``agent_input`` /
+    ``agent_output`` digests are JCS-canonical and re-verifiable. The float
+    values returned to the caller are unchanged — only the sealed copy is
+    canonicalized.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    if isinstance(value, dict):
+        return {k: _seal_safe(v) for k, v in cast("dict[str, Any]", value).items()}
+    if isinstance(value, list):
+        return [_seal_safe(v) for v in cast("list[Any]", value)]
+    return value
+
+
 class _StripePaymentIntent(Protocol):
     """Structural type for the ``stripe.PaymentIntent`` attributes used here."""
 
@@ -132,13 +154,15 @@ class StripeCapsuledPayments:
             action="stripe_payment",
             operator=str(payer),
             developer="stripe-capsule-payments@v1",
-            agent_input={
-                "payer": str(payer),
-                "payee": str(payee),
-                "amount_usd": amount,
-                "currency": currency,
-            },
-            agent_output=result,
+            agent_input=_seal_safe(
+                {
+                    "payer": str(payer),
+                    "payee": str(payee),
+                    "amount_usd": amount,
+                    "currency": currency,
+                }
+            ),
+            agent_output=_seal_safe(result),
             verdict="executed",
             effect={"type": "stripe_payment", "status": result["status"]},
             anchor=self._anchor,
