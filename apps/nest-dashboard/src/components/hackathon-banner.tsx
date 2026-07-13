@@ -9,22 +9,23 @@ export function HackathonBanner() {
     <div className="bg-ink-900 text-cream-100">
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-x-5 gap-y-1 px-6 sm:px-10 py-2.5 text-center text-[0.85rem] leading-snug">
         <span>
-          <span className="font-semibold text-cream-50">NandaHack is on.</span>{" "}
+          <span className="font-semibold text-cream-50">
+            Vote for your favorite SkillMD.
+          </span>{" "}
           <span className="text-cream-200">
-            Final deadline:{" "}
+            The submission with the most likes wins the{" "}
             <span className="font-semibold text-cream-50">
-              Saturday July 11, 2 PM ET
+              $1,000 Audience Choice Award
             </span>
-            {" — "}finalized SkillMD + demo video (video required for judging,
-            not scored).
+            .
           </span>
         </span>
         <span className="flex items-center gap-4">
           <Link
-            href="/hackathon"
+            href="/skills"
             className="font-medium underline underline-offset-4 decoration-cream-200/50 hover:decoration-cream-50 transition-colors"
           >
-            Details &amp; FAQs &rarr;
+            Vote now &rarr;
           </Link>
         </span>
       </div>

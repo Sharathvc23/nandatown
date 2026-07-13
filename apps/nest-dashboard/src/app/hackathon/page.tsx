@@ -1,18 +1,16 @@
 /**
- * /hackathon — landing page for the marketplace.
+ * /hackathon — the PR Gallery.
  *
- * Shows the four headline aggregates the brief asked for (total
- * submissions, unique participants, layers covered, total lines
- * added), a few featured submissions, and a CTA into the layer
- * grid. Server-rendered: reads the static dataset and renders.
+ * A live view of every hackathon pull request on projnanda/nandatown,
+ * synced straight from GitHub: the twelve protocol layers plus Other,
+ * followed by the full PR feed with merged submissions pinned first.
+ * The GitHub webhook busts the cache the moment a PR merges, so merges
+ * show up here right away.
  */
 
 import Link from "next/link";
-import { loadDataset } from "@/lib/hackathon";
+import { formatScore, loadDataset } from "@/lib/hackathon";
 import { EmptyState, SubmissionCard } from "@/components/hackathon-card";
-import { HackathonFaq } from "@/components/hackathon-faq";
-import { HackathonPhases } from "@/components/hackathon-phases";
-import { hackathonEvent, hackathonFaqs } from "@/lib/hackathon-event";
 
 // Render at request time; the GitHub data layer is cached by
 // unstable_cache, so this never re-fetches per request but also never bakes
@@ -20,273 +18,153 @@ import { hackathonEvent, hackathonFaqs } from "@/lib/hackathon-event";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "NandaHack — Nanda Town",
+  title: "PR Gallery — Nanda Town",
   description:
-    "NandaHack: a fully virtual agentic AI hackathon by Project NANDA, HCLTech, and MIT Media Lab. Dates, FAQs, and every submitted protocol and plugin by layer, author, and judge score.",
+    "Every NandaHack pull request, live from GitHub: the twelve protocol layers plus Other, with merged PRs landing in their layer the moment they merge.",
 };
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div>
-      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
-        {label}
-      </span>
-      <p className="mt-3 font-display text-[2.2rem] leading-none text-ink-900 tabular-nums">
-        {value}
-      </p>
-      {hint && (
-        <span className="mt-2 block text-[0.85rem] text-ink-400">{hint}</span>
-      )}
-    </div>
-  );
-}
-
-export default async function HackathonLandingPage() {
+export default async function PRGalleryPage() {
   const data = await loadDataset();
-  // Feature the freshest merges; if fewer than three PRs have merged,
-  // round out the row with the newest submissions still in review.
-  const merged = data.submissions
-    .filter((s) => s.state === "merged")
-    .sort((a, b) => (b.merged_at ?? "").localeCompare(a.merged_at ?? ""));
-  const featured = [
-    ...merged,
-    ...data.submissions.filter((s) => s.state !== "merged"),
-  ].slice(0, 3);
+  const submissions = data.submissions
+    .slice()
+    .sort((a, b) => {
+      // Merged first, then newest activity.
+      if ((a.state === "merged") !== (b.state === "merged")) {
+        return a.state === "merged" ? -1 : 1;
+      }
+      const at = (a.state === "merged" && a.merged_at) || a.created_at;
+      const bt = (b.state === "merged" && b.merged_at) || b.created_at;
+      return bt.localeCompare(at);
+    });
 
   return (
     <div className="bg-cream-100">
       {/* Header */}
       <section className="paper-texture border-b border-cream-400/70">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 pb-16">
-          <div className="flex items-center gap-3 mb-10 animate-fade-in">
+        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 pb-12">
+          <div className="flex items-center gap-3 mb-8 animate-fade-in">
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-rust animate-pulse-dot" />
-            <span className="eyebrow">Hackathon &middot; open submissions</span>
+            <span className="eyebrow">NandaHack &middot; live from GitHub</span>
           </div>
 
-          <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-            <h1 className="font-display animate-fade-in stagger-1 text-[clamp(2.6rem,6vw,5rem)] leading-[1.02] tracking-tight text-ink-900">
-              The marketplace
+          <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+            <h1 className="font-display animate-fade-in stagger-1 text-[clamp(2.4rem,5.4vw,4.2rem)] leading-[1.04] tracking-tight text-ink-900">
+              The PR
               <br />
-              of <span className="italic text-ink-700">protocols</span>.
+              <span className="italic text-ink-700">gallery</span>.
             </h1>
-
-            <div className="animate-fade-in stagger-2 lg:pt-6 max-w-md">
-              <p className="text-[1.1rem] leading-[1.6] text-ink-500">
-                Every plugin and protocol built at NandaHack, with the author
-                behind it and the layer it touches &mdash; synced straight
-                from GitHub, so merged PRs land here in their layer the
-                moment they merge.
-              </p>
-              <p className="mt-4 text-[1.05rem] leading-[1.6] text-ink-700">
-                <strong className="font-semibold">Fully virtual</strong>
-                {" — "}build from anywhere, {hackathonEvent.virtualWindow}. The in-person
-                finale at MIT Media Lab is optional and doesn&rsquo;t affect scoring.
-              </p>
-            </div>
+            <p className="animate-fade-in stagger-2 text-[1.05rem] leading-[1.6] text-ink-500 max-w-md">
+              Every hackathon pull request on projnanda/nandatown, synced
+              straight from GitHub. Twelve protocol layers plus Other &mdash;
+              merged PRs land in their layer the moment they merge.
+            </p>
           </div>
 
-          <div className="mt-12 flex flex-wrap gap-3 animate-fade-in stagger-3">
-            <Link href="/hackathon/layers" className="btn-primary">
-              Browse by layer
-            </Link>
-            <a
-              href={hackathonEvent.officialUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary"
-            >
-              Official hackathon site
-            </a>
-            <a
-              href={hackathonEvent.githubPRsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary"
-            >
-              All open PRs on GitHub
-            </a>
-            <a href="#faq" className="btn-secondary">
-              FAQs
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Two phases to join */}
-      <section className="border-b border-cream-400/70 bg-cream-50">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-14">
-          <HackathonPhases />
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="border-b border-cream-400/70">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-12 grid grid-cols-2 md:grid-cols-4 gap-10">
-          <Stat
-            label="Submissions"
-            value={String(data.stats.total_submissions)}
-            hint="open + merged PRs"
-          />
-          <Stat
-            label="Participants"
-            value={String(data.stats.unique_participants)}
-            hint="unique handles"
-          />
-          <Stat
-            label="Merged"
-            value={String(data.stats.total_merged)}
-            hint="PRs merged into the repo"
-          />
-          <Stat
-            label="Layers covered"
-            value={`${data.stats.layers_covered}/${data.stats.layers_total}`}
-            hint="layers with at least one PR"
-          />
-        </div>
-      </section>
-
-      {/* Key dates */}
-      <section className="border-b border-cream-400/70 bg-cream-50">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-14">
-          <div className="flex items-end justify-between gap-6 mb-10">
+          <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4 animate-fade-in stagger-3">
             <div>
-              <p className="eyebrow">Key dates</p>
-              <h2 className="mt-4 font-display text-[2rem] leading-[1.1] text-ink-900">
-                Build anywhere,<br />
-                <span className="italic text-ink-700">demo</span> in Boston.
-              </h2>
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
+                Pull requests
+              </span>
+              <p className="mt-2 font-display text-[2rem] leading-none text-ink-900 tabular-nums">
+                {data.stats.total_submissions}
+              </p>
+            </div>
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
+                Merged
+              </span>
+              <p className="mt-2 font-display text-[2rem] leading-none text-ink-900 tabular-nums">
+                {data.stats.total_merged}
+              </p>
+            </div>
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
+                Layers covered
+              </span>
+              <p className="mt-2 font-display text-[2rem] leading-none text-ink-900 tabular-nums">
+                {data.stats.layers_covered}/{data.stats.layers_total}
+              </p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="grid gap-px bg-cream-400/40 border border-cream-400/40 rounded-2xl overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                label: "Virtual hackathon",
-                date: hackathonEvent.virtualWindow,
-                body: "Build agentic AI apps in the Nanda Town sandbox from anywhere. No Luma registration needed to participate virtually.",
-              },
-              {
-                label: "Final deadline",
-                date: "Sat, July 11 · 2 PM ET",
-                body: "Finalized SkillMD plus a demo video. The video is required to be considered for judging, but doesn't affect your score.",
-              },
-              {
-                label: "Summit & finale",
-                date: "Sat, July 11",
-                body: "Nanda Summit at MIT Media Lab. Top-10 demos at 4 PM, results and awards at 5 PM. Optional — attendance doesn't affect scoring.",
-              },
-            ].map((item) => (
-              <div key={item.label} className="bg-cream-50 p-6">
-                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-rust">
-                  {item.label}
+      {/* Layer grid: the twelve layers + Other */}
+      <section className="border-b border-cream-400/70">
+        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-12">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {data.layers.map((layer, idx) => (
+              <Link
+                key={layer.key}
+                href={`/hackathon/layers/${layer.key}`}
+                className="group block rounded-2xl border border-cream-400/70 bg-cream-50 p-7 transition-colors hover:bg-cream-200/60"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 tabular-nums">
+                    {layer.key === "other" ? "＋" : String(idx + 1).padStart(2, "0")}
+                  </span>
+                  {layer.is_open ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-[0.18em] border border-dashed border-cream-400 text-ink-400">
+                      open
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-[0.18em] bg-rust-bg text-rust border border-rust-soft/60">
+                      {layer.submission_count}{" "}
+                      {layer.submission_count === 1 ? "PR" : "PRs"}
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="mt-5 font-display text-[1.6rem] leading-[1.15] text-ink-900 group-hover:text-ink-700">
+                  {layer.label}
+                </h3>
+                <p className="mt-2 text-[0.92rem] leading-[1.55] text-ink-500">
+                  {layer.blurb}
                 </p>
-                <p className="mt-3 font-display text-[1.4rem] leading-tight text-ink-900">
-                  {item.date}
-                </p>
-                <p className="mt-3 text-[0.9rem] leading-[1.55] text-ink-500">
-                  {item.body}
-                </p>
-              </div>
+
+                <div className="mt-5 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
+                  <span>
+                    {layer.is_open ? "open for submissions" : "top score"}
+                  </span>
+                  <span className="tabular-nums text-ink-700">
+                    {layer.is_open
+                      ? "—"
+                      : layer.top_score !== null
+                        ? formatScore(layer.top_score)
+                        : "unscored"}
+                  </span>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Featured */}
-      <section>
+      {/* Live PR feed */}
+      <section className="bg-cream-50">
         <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-14">
           <div className="flex items-end justify-between gap-6 mb-8">
             <div>
-              <p className="eyebrow">Featured submissions</p>
+              <p className="eyebrow">All pull requests</p>
               <h2 className="mt-4 font-display text-[2rem] leading-[1.1] text-ink-900">
-                Fresh off the<br />
-                <span className="italic text-ink-700">merge</span>.
+                Merged first,<br />
+                <span className="italic text-ink-700">newest</span> next.
               </h2>
             </div>
-            <Link
-              href="/hackathon/layers"
-              className="hidden sm:inline-flex font-mono text-[11px] uppercase tracking-[0.18em] text-ink-500 hover:text-ink-900"
-            >
-              Browse by layer →
-            </Link>
           </div>
 
-          {featured.length === 0 ? (
+          {submissions.length === 0 ? (
             <EmptyState
               title="No submissions yet."
-              body="GitHub couldn't be reached just now, or no hackathon/* PRs are open. This page syncs automatically — check back in a few minutes."
+              body="GitHub couldn't be reached when the dataset was last built, or no hackathon/* PRs are open. Try again in five minutes."
             />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-3">
-              {featured.map((sub) => (
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {submissions.map((sub) => (
                 <SubmissionCard key={sub.id} submission={sub} />
               ))}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* Footer rail */}
-      <section className="border-t border-cream-400/70 bg-cream-50">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-14 grid gap-10 lg:grid-cols-[1fr_2fr] lg:items-start">
-          <div>
-            <p className="eyebrow">How it works</p>
-            <h2 className="mt-4 font-display text-[1.8rem] leading-[1.1] text-ink-900">
-              Open PR →<br />
-              <span className="italic text-ink-700">judge</span> → marketplace.
-            </h2>
-          </div>
-          <div className="grid gap-px bg-cream-400/40 border border-cream-400/40 rounded-2xl overflow-hidden sm:grid-cols-3">
-            {[
-              {
-                label: "01 — Submit",
-                body: "Open a PR with branch hackathon/<handle>-<theme>. It appears here automatically.",
-              },
-              {
-                label: "02 — Judge",
-                body: "A judge panel scores each submission on correctness, realism, design, and docs. Missing scores read as “unscored”.",
-              },
-              {
-                label: "03 — Try it",
-                body: "Click any submission for the full breakdown — author, layer, PR diff, and score reasoning.",
-              },
-            ].map((step) => (
-              <div key={step.label} className="bg-cream-50 p-6">
-                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-rust">
-                  {step.label}
-                </p>
-                <p className="mt-3 text-[0.92rem] leading-[1.55] text-ink-500">
-                  {step.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="border-t border-cream-400/70 scroll-mt-20">
-        <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-16 grid gap-12 lg:grid-cols-[1fr_2fr] lg:items-start">
-          <div>
-            <p className="eyebrow">FAQs</p>
-            <h2 className="mt-4 font-display text-[2rem] leading-[1.1] text-ink-900">
-              Questions,<br />
-              <span className="italic text-ink-700">answered</span>.
-            </h2>
-            <p className="mt-5 max-w-xs text-[0.95rem] leading-[1.6] text-ink-500">
-              The short version: yes, your team can do the whole thing
-              virtually. Details below.
-            </p>
-          </div>
-          <HackathonFaq entries={hackathonFaqs} />
         </div>
       </section>
     </div>
