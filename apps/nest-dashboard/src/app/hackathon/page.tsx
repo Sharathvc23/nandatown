@@ -9,7 +9,7 @@
  */
 
 import Link from "next/link";
-import { formatScore, loadDataset } from "@/lib/hackathon";
+import { loadDataset } from "@/lib/hackathon";
 import { EmptyState, SubmissionCard } from "@/components/hackathon-card";
 
 // Render at request time; the GitHub data layer is cached by
@@ -121,19 +121,6 @@ export default async function PRGalleryPage() {
                 <p className="mt-2 text-[0.92rem] leading-[1.55] text-ink-500">
                   {layer.blurb}
                 </p>
-
-                <div className="mt-5 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
-                  <span>
-                    {layer.is_open ? "open for submissions" : "top score"}
-                  </span>
-                  <span className="tabular-nums text-ink-700">
-                    {layer.is_open
-                      ? "—"
-                      : layer.top_score !== null
-                        ? formatScore(layer.top_score)
-                        : "unscored"}
-                  </span>
-                </div>
               </Link>
             ))}
           </div>

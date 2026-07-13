@@ -103,7 +103,6 @@ export function SubmissionCard({ submission }: { submission: Submission }) {
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge submission={submission} />
             <AuthorBadge submission={submission} />
-            <ScoreBadge submission={submission} />
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
               {submission.layer}
             </span>
