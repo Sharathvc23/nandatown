@@ -18,7 +18,9 @@ Example::
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
+import os
 from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
@@ -1835,6 +1837,301 @@ def validate_receipt_reputation_honest_confidence(
 
 
 # ---------------------------------------------------------------------------
+# Receipt-reputation anchoring (capsule-ledger) validator
+# ---------------------------------------------------------------------------
+#
+# The ``receipt_reputation`` scenario emits each interaction as a ``receipt:``
+# trace line carrying the full receipt JSON. A capsule-anchoring trust plugin
+# (``capsule_emit``) additionally *seals* every valid receipt into a JSONL
+# capsule ledger: each ledger entry records the RFC 8785 JCS / SHA-256 digest of
+# the receipt it anchored under ``model_attestation.compute_attestation
+# .agent_input_digest``.  This validator proves the anchoring property directly
+# from those two artifacts -- the trace and the ledger the run produced -- with
+# no dependency on the example plugin or on ``capsule_emit``:
+#
+#   every valid receipt observed on the wire must be anchored in the ledger,
+#   i.e. its independently-recomputed content digest must appear as a sealed
+#   ``agent_input_digest``.
+#
+# A non-anchoring baseline (``agent_receipts`` / ``score_average``) writes no
+# ledger at all, so no receipt is anchored and this FAILS.  A run whose receipts
+# were mutated after sealing has trace content whose digest no longer matches any
+# sealed capsule, so it FAILS too.  Only a faithful capsule-anchored run PASSES.
+
+# The default ledger filename the capsule trust plugin writes (to the run's cwd).
+_CAPSULE_LEDGER_FILENAME = "capsule_ledger.jsonl"
+
+
+def _jcs_string(s: str) -> str:
+    """RFC 8785 §3.2.2.2 minimal-escape string serialization.
+
+    Example::
+
+        assert _jcs_string("a\\tb") == '"a\\\\tb"'
+    """
+    out = ['"']
+    for ch in s:
+        o = ord(ch)
+        if ch == '"':
+            out.append('\\"')
+        elif ch == "\\":
+            out.append("\\\\")
+        elif o == 0x08:
+            out.append("\\b")
+        elif o == 0x09:
+            out.append("\\t")
+        elif o == 0x0A:
+            out.append("\\n")
+        elif o == 0x0C:
+            out.append("\\f")
+        elif o == 0x0D:
+            out.append("\\r")
+        elif o < 0x20:
+            out.append(f"\\u{o:04x}")
+        else:
+            out.append(ch)
+    out.append('"')
+    return "".join(out)
+
+
+def _jcs_value(v: Any) -> str:
+    """RFC 8785 JCS serialization of a JSON value (receipts hold str/int/list/dict).
+
+    Floats are rejected because a digest over a binary float is not reproducible;
+    receipts in this scenario never contain them, so this never fires here.
+
+    Example::
+
+        assert _jcs_value({"b": 1, "a": 2}) == '{"a":2,"b":1}'
+    """
+    if v is None:
+        return "null"
+    if v is True:
+        return "true"
+    if v is False:
+        return "false"
+    if isinstance(v, str):
+        return _jcs_string(v)
+    if isinstance(v, int):  # bool handled above (subclass of int)
+        return str(v)
+    if isinstance(v, float):
+        raise ValueError("float is not permitted in a reproducible digest")
+    if isinstance(v, list):
+        return "[" + ",".join(_jcs_value(x) for x in cast("list[Any]", v)) + "]"
+    if isinstance(v, dict):
+        items = sorted(cast("dict[str, Any]", v).items(), key=lambda kv: kv[0].encode("utf-16-be"))
+        return "{" + ",".join(_jcs_string(k) + ":" + _jcs_value(val) for k, val in items) + "}"
+    raise TypeError(f"value of type {type(v).__name__!r} is not JSON-serializable here")
+
+
+def _normalize_absent(v: Any) -> Any:
+    """Absent-field normalization: drop null / empty-array / empty-object members.
+
+    Applied bottom-up, matching the Agent Action Capsule canonicalization the
+    ledger digests were computed under.
+
+    Example::
+
+        assert _normalize_absent({"a": 1, "b": None, "c": {}}) == {"a": 1}
+    """
+    if isinstance(v, dict):
+        out: dict[str, Any] = {}
+        for key, val in cast("dict[str, Any]", v).items():
+            nv = _normalize_absent(val)
+            if nv is None:
+                continue
+            if isinstance(nv, (dict, list)) and len(cast("Any", nv)) == 0:
+                continue
+            out[key] = nv
+        return out
+    if isinstance(v, list):
+        return [_normalize_absent(x) for x in cast("list[Any]", v)]
+    return v
+
+
+def _receipt_digest(receipt: dict[str, Any]) -> str:
+    """Lowercase-hex SHA-256 of JCS(normalize(receipt)) -- the sealed digest form.
+
+    This mirrors ``agent_action_capsule.canonical.json_digest`` without importing
+    it, so the core validator stays free of any capsule dependency.
+
+    Example::
+
+        d = _receipt_digest({"issuer_did": "abc", "action": {"category": "buy"}})
+    """
+    return hashlib.sha256(_jcs_value(_normalize_absent(receipt)).encode("utf-8")).hexdigest()
+
+
+def _collect_receipts(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Parse every well-formed ``receipt:`` line into a receipt dict (dedup by identity).
+
+    Both the issuer's ``send`` and the auditor's ``receive`` carry the same bytes;
+    de-duplicating on the canonical digest keeps one copy of each distinct receipt.
+
+    Example::
+
+        receipts = _collect_receipts(events)
+    """
+    seen: set[str] = set()
+    receipts: list[dict[str, Any]] = []
+    for ev in events:
+        msg = str(ev.get("msg", ""))
+        if not msg.startswith("receipt:"):
+            continue
+        body = msg[len("receipt:") :]
+        try:
+            parsed = json.loads(body)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(parsed, dict):
+            continue
+        receipt = cast("dict[str, Any]", parsed)
+        try:
+            digest = _receipt_digest(receipt)
+        except (TypeError, ValueError):
+            continue
+        if digest in seen:
+            continue
+        seen.add(digest)
+        receipts.append(receipt)
+    return receipts
+
+
+def _load_ledger_digests(ledger_path: Path) -> set[str] | None:
+    """Return the set of sealed ``agent_input_digest`` values, or ``None`` if absent.
+
+    ``None`` distinguishes "no ledger was produced" (the non-anchoring baseline)
+    from "a ledger exists but sealed nothing" (an empty set).
+
+    Example::
+
+        digests = _load_ledger_digests(Path("capsule_ledger.jsonl"))
+    """
+    if not ledger_path.is_file():
+        return None
+    digests: set[str] = set()
+    with ledger_path.open() as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                capsule = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(capsule, dict):
+                continue
+            stored = (
+                cast("dict[str, Any]", capsule)
+                .get("model_attestation", {})
+                .get("compute_attestation", {})
+                .get("agent_input_digest")
+            )
+            if isinstance(stored, str):
+                digests.add(stored)
+    return digests
+
+
+def _resolve_ledger_path() -> Path:
+    """Locate the capsule ledger the run wrote (its default name in the run cwd).
+
+    ``AAC_CAPSULE_LEDGER`` overrides the path for out-of-tree rigs. Kept separate
+    from the check itself so tests can supply a fixture ledger directly.
+
+    Example::
+
+        path = _resolve_ledger_path()
+    """
+    override = os.environ.get("AAC_CAPSULE_LEDGER")
+    if override:
+        return Path(override)
+    return Path.cwd() / _CAPSULE_LEDGER_FILENAME
+
+
+def check_receipt_reputation_anchored(
+    events: list[dict[str, Any]],
+    ledger_digests: set[str] | None,
+) -> list[ValidationResult]:
+    """Core anchoring check: every valid receipt on the wire is sealed in the ledger.
+
+    Separated from the registered validator so it can be exercised against
+    fixture ledgers without touching the filesystem. ``ledger_digests`` is the
+    set of sealed ``agent_input_digest`` values, or ``None`` when no ledger was
+    produced (the non-anchoring baseline).
+
+    Example::
+
+        results = check_receipt_reputation_anchored(events, {"<digest>"})
+    """
+    receipts = _collect_receipts(events)
+    if not receipts:
+        return [
+            ValidationResult(
+                "receipt_reputation_anchored",
+                False,
+                "no receipts observed in trace",
+            )
+        ]
+
+    if ledger_digests is None:
+        return [
+            ValidationResult(
+                "receipt_reputation_anchored",
+                False,
+                f"{len(receipts)} receipts issued but no capsule ledger was produced "
+                "(trust layer does not anchor)",
+            )
+        ]
+
+    unanchored = [r for r in receipts if _receipt_digest(r) not in ledger_digests]
+    if unanchored:
+        sample = ", ".join(str(r.get("receipt_id", "?")) for r in unanchored[:5])
+        return [
+            ValidationResult(
+                "receipt_reputation_anchored",
+                False,
+                f"{len(unanchored)}/{len(receipts)} receipts not anchored in ledger "
+                f"(digest absent or content mutated after sealing): {sample}",
+            )
+        ]
+    return [
+        ValidationResult(
+            "receipt_reputation_anchored",
+            True,
+            f"all {len(receipts)} receipts anchored in capsule ledger "
+            f"({len(ledger_digests)} sealed digests)",
+        )
+    ]
+
+
+def validate_receipt_reputation_anchored(
+    events: list[dict[str, Any]],
+) -> list[ValidationResult]:
+    """Adversarial anchoring validator for the capsule-emit trust layer.
+
+    Confirms the run's authoritative record exists and binds to what happened:
+    every valid receipt seen in the trace must be sealed in the capsule ledger
+    (its recomputed JCS/SHA-256 digest must appear as an ``agent_input_digest``).
+
+    * ``trust: capsule_emit`` PASSES -- it emits a ledger sealing every receipt.
+    * a non-anchoring baseline (``agent_receipts`` / ``score_average``) FAILS --
+      it writes no ledger, so nothing is anchored.
+    * a run whose receipts were tampered after sealing FAILS -- the mutated trace
+      content no longer hashes to any sealed digest.
+
+    The ledger is resolved from the run cwd (its default location) or the
+    ``AAC_CAPSULE_LEDGER`` env var. The check imports nothing capsule-specific;
+    the canonicalization is reimplemented locally so core stays dependency-free.
+
+    Example::
+
+        results = validate_receipt_reputation_anchored(events)
+    """
+    ledger_digests = _load_ledger_digests(_resolve_ledger_path())
+    return check_receipt_reputation_anchored(events, ledger_digests)
+
+
+# ---------------------------------------------------------------------------
 # Validator registry
 # ---------------------------------------------------------------------------
 
@@ -1888,5 +2185,6 @@ VALIDATORS: dict[str, list[Any]] = {
     "receipt_reputation": [
         validate_receipt_reputation_ring_severed,
         validate_receipt_reputation_honest_confidence,
+        validate_receipt_reputation_anchored,
     ],
 }
