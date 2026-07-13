@@ -38,11 +38,49 @@ To use real Stripe::
 from __future__ import annotations
 
 import hashlib
+import importlib
 import os
-from typing import Any
+from typing import Any, Protocol, cast
 
 import capsule_emit
 from nest_core.types import AgentId
+
+
+class _StripePaymentIntent(Protocol):
+    """Structural type for the ``stripe.PaymentIntent`` attributes used here."""
+
+    id: str
+    status: str
+    amount_received: float
+
+
+class _StripePaymentIntentAPI(Protocol):
+    def create(self, **kwargs: Any) -> _StripePaymentIntent: ...
+    def retrieve(self, intent_id: str, /) -> _StripePaymentIntent: ...
+
+
+class _StripeModule(Protocol):
+    """Structural type for the subset of the optional ``stripe`` SDK used here.
+
+    ``stripe`` is an optional extra (``capsule-emit-nanda[stripe]``) that ships
+    no type information and is absent in the default sandbox install.  Loading
+    it via :func:`importlib.import_module` and typing the result with this
+    Protocol keeps the real-Stripe path fully type-checked without an
+    unresolved bare ``import stripe`` (and without a stub for a package that may
+    not be installed).
+    """
+
+    api_key: str
+    PaymentIntent: _StripePaymentIntentAPI
+
+
+def _load_stripe() -> _StripeModule:
+    """Import the optional ``stripe`` SDK, typed via :class:`_StripeModule`.
+
+    Raises ``ImportError``/``ModuleNotFoundError`` (same as a bare ``import
+    stripe``) when the extra is not installed.
+    """
+    return cast("_StripeModule", importlib.import_module("stripe"))
 
 
 class StripeCapsuledPayments:
@@ -75,7 +113,7 @@ class StripeCapsuledPayments:
         amount: float,
         currency: str = "usd",
         **metadata: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Execute a payment and seal the outcome as a capsule.
 
         Returns a dict with ``payment_intent_id`` and ``status``.
@@ -110,34 +148,35 @@ class StripeCapsuledPayments:
         payee: AgentId,
         amount: float,
         currency: str = "usd",
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return a fee quote without executing the payment."""
         return {"amount": amount, "currency": currency, "fee": 0.0}
 
-    async def verify_payment(self, payment_ref: dict) -> bool:
+    async def verify_payment(self, payment_ref: dict[str, Any]) -> bool:
         """Verify that a previously completed payment succeeded."""
         stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
         if not stripe_key:
             return payment_ref.get("status") == "succeeded"
         try:
-            import stripe  # type: ignore[import]
-
+            stripe = _load_stripe()
             stripe.api_key = stripe_key
             intent = stripe.PaymentIntent.retrieve(payment_ref["payment_intent_id"])
             return intent.status == "succeeded"
         except Exception:
             return False
 
-    async def refund(self, payment_ref: dict, amount: float | None = None) -> dict:
+    async def refund(
+        self, payment_ref: dict[str, Any], amount: float | None = None
+    ) -> dict[str, Any]:
         """Issue a refund (sandbox: always succeeds)."""
         return {"refunded": True, "amount": amount}
 
 
 def _real_stripe_pay(
     payer: AgentId, payee: AgentId, amount: float, currency: str, stripe_key: str
-) -> dict:
+) -> dict[str, Any]:
     try:
-        import stripe  # type: ignore[import]
+        stripe = _load_stripe()
     except ImportError as exc:
         raise ImportError(
             "pip install capsule-emit-nanda[stripe]  (or unset STRIPE_SECRET_KEY to use sandbox)"
@@ -156,7 +195,9 @@ def _real_stripe_pay(
     }
 
 
-def _sandbox_pay(payer: AgentId, payee: AgentId, amount: float, currency: str) -> dict:
+def _sandbox_pay(
+    payer: AgentId, payee: AgentId, amount: float, currency: str
+) -> dict[str, Any]:
     seed = hashlib.sha256(f"{payer}:{payee}:{amount}:{currency}".encode()).hexdigest()[:16]
     return {
         "payment_intent_id": f"pi_sandbox_{seed}",

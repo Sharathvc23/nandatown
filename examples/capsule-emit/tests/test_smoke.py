@@ -2,6 +2,8 @@
 """Smoke tests: instantiate both plugins and exercise one happy path each."""
 
 import json
+from pathlib import Path
+from typing import Any
 
 import pytest
 from capsule_emit_nanda.payments import StripeCapsuledPayments
@@ -24,7 +26,7 @@ def no_real_stripe(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _make_corroborated_receipt(
     issuer_seed: bytes, counterparty_seed: bytes, action_id: str = "act-1"
-) -> dict:
+) -> dict[str, Any]:
     """Return a signed and co-signed receipt using the two given seeds.
 
     ``counterparty_did`` lives inside ``action`` (where _counterparty() reads it)
@@ -41,7 +43,7 @@ def _make_corroborated_receipt(
         .public_key()
         .public_bytes(Encoding.Raw, PublicFormat.Raw)
     )
-    receipt: dict = {
+    receipt: dict[str, Any] = {
         "issuer_did": did_for_pubkey(issuer_pub),
         "action": {
             "category": "purchase",
@@ -54,7 +56,7 @@ def _make_corroborated_receipt(
 
 
 @pytest.mark.asyncio
-async def test_trust_report_and_score(tmp_path: pytest.TempdirFactory) -> None:
+async def test_trust_report_and_score(tmp_path: Path) -> None:
     plugin = CapsuleEmitTrust(ledger=tmp_path / "ledger.jsonl")
     agent = AgentId("agent-a")
     reporter = AgentId("agent-b")
@@ -69,7 +71,7 @@ async def test_trust_report_and_score(tmp_path: pytest.TempdirFactory) -> None:
 
 
 @pytest.mark.asyncio
-async def test_sandbox_pay(tmp_path: pytest.TempdirFactory) -> None:
+async def test_sandbox_pay(tmp_path: Path) -> None:
     plugin = StripeCapsuledPayments(ledger=str(tmp_path / "ledger.jsonl"))
     payer = AgentId("payer-1")
     payee = AgentId("payee-1")
@@ -81,7 +83,7 @@ async def test_sandbox_pay(tmp_path: pytest.TempdirFactory) -> None:
 
 
 @pytest.mark.asyncio
-async def test_sandbox_pay_is_deterministic(tmp_path: pytest.TempdirFactory) -> None:
+async def test_sandbox_pay_is_deterministic(tmp_path: Path) -> None:
     """Same inputs produce the same payment_intent_id (ledger is reproducible)."""
     plugin = StripeCapsuledPayments(ledger=str(tmp_path / "ledger.jsonl"), anchor=False)
     payer = AgentId("payer-x")
@@ -93,7 +95,7 @@ async def test_sandbox_pay_is_deterministic(tmp_path: pytest.TempdirFactory) -> 
 
 
 @pytest.mark.asyncio
-async def test_gate3_tampered_receipt_excluded_from_score(tmp_path: pytest.TempdirFactory) -> None:
+async def test_gate3_tampered_receipt_excluded_from_score(tmp_path: Path) -> None:
     """Gate 3 fires: agent_receipts accepts a mutated record; CapsuleEmitTrust rejects it.
 
     Attack: an adversary modifies a receipt's action category in-memory after the
@@ -127,7 +129,7 @@ async def test_gate3_tampered_receipt_excluded_from_score(tmp_path: pytest.Tempd
     assert score_before.confidence > 0.0
 
     # Adversary mutates the in-memory receipt (agent_receipts has no defence here).
-    plugin._receipts[-1]["action"]["category"] = "premium_purchase"
+    plugin.receipts[-1]["action"]["category"] = "premium_purchase"
 
     # Gate 3 re-verification: verify_input_digest detects the mutation.
     # The capsule's sealed digest no longer matches → receipt excluded → score=0.
