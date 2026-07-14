@@ -7,7 +7,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-uv.lock
 traces/
 # Capsule ledger written to cwd by the capsule_emit trust/payments plugins.
 capsule_ledger.jsonl
