@@ -24,11 +24,13 @@ export function LayerSubmissions({
   const sorted = useMemo(() => {
     const xs = [...submissions];
     xs.sort((a, b) => {
+      // Merged PRs always lead — they're the showcased work.
+      if (a.state !== b.state) return a.state === "merged" ? -1 : 1;
       if (sort === "score") {
         const sa = a.score?.total ?? -1;
         const sb = b.score?.total ?? -1;
         if (sa !== sb) return sb - sa;
-        return (b.additions ?? 0) - (a.additions ?? 0);
+        return b.created_at.localeCompare(a.created_at);
       }
       if (sort === "date") {
         return b.created_at.localeCompare(a.created_at);
