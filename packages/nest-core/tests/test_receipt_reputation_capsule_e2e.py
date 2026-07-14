@@ -2,11 +2,11 @@
 """End-to-end tests for the ``receipt_reputation_capsule`` scenario pipeline.
 
 These run the real scenario (runner → auditor → trace → validators) with the
-``capsule_emit`` trust plugin and prove the graded default state is honest and
-fail-closed: until the operator-gated pre-anchor step commits real ledger
-write-receipt fixtures and pins the production service identity, the anchored
-check FAILS — while the reputation checks (ring severance, honest confidence)
-already PASS and the trace stays byte-deterministic.
+``capsule_emit`` trust plugin and grade it exactly as the rig does — through
+the validator registry, i.e. against the PINNED production service identity.
+The committed Azure Confidential Ledger write-receipt fixtures are replayed
+onto the trace and verified offline; the graded path performs no network,
+filesystem, environment, or clock access in the verdict.
 """
 
 from __future__ import annotations
@@ -34,8 +34,15 @@ def _config(trace: Path, seed: int | None = None) -> ScenarioConfig:
 
 
 @pytest.mark.asyncio
-async def test_capsule_scenario_grades_fail_closed_without_fixtures(tmp_path: Path) -> None:
-    """No committed fixtures + no pinned identity -> anchored FAILS, rest PASSES."""
+async def test_capsule_scenario_passes_through_registry_with_committed_fixtures(
+    tmp_path: Path,
+) -> None:
+    """Honest run + committed ledger fixtures -> all three validators PASS.
+
+    This is the graded path end to end: the plugin loads the committed write
+    receipts, the auditor broadcasts them, and the registry validator verifies
+    each offline against the pinned production service identity.
+    """
     trace = tmp_path / "capsule.jsonl"
     await ScenarioRunner(_config(trace)).run()
 
@@ -43,21 +50,36 @@ async def test_capsule_scenario_grades_fail_closed_without_fixtures(tmp_path: Pa
     assert results["receipt_reputation_ring_severed"].passed
     assert results["receipt_reputation_honest_confidence"].passed
     anchored = results["receipt_reputation_anchored"]
-    assert not anchored.passed, (
-        "anchored must FAIL until real ledger receipts are committed and the "
-        f"service identity is pinned; got: {anchored.detail}"
-    )
+    assert anchored.passed, f"anchored must PASS with committed fixtures: {anchored.detail}"
+    assert "verified" in anchored.detail and "offline" in anchored.detail
 
-    # The plugin seals (trip-wire lines present) but emits no anchoring
-    # evidence — there are no committed write-receipt fixtures to replay.
+    # The trace carries both the seal trip-wire and the ledger evidence.
     msgs = [json.loads(line).get("msg", "") for line in trace.read_text().splitlines()]
     assert any(str(m).startswith("seal:") for m in msgs)
-    assert not any(str(m).startswith("ccfreceipt:") for m in msgs)
+    assert any(str(m).startswith("ccfreceipt:") for m in msgs)
+
+
+@pytest.mark.asyncio
+async def test_non_anchoring_baseline_fails_through_registry(tmp_path: Path) -> None:
+    """The same scenario under ``agent_receipts`` FAILS the anchored check.
+
+    The discrimination the gate exists for: a trust layer that anchors nothing
+    emits no ledger evidence and cannot pass, fixtures or not.
+    """
+    trace = tmp_path / "baseline.jsonl"
+    config = _config(trace)
+    config.layers.trust = "agent_receipts"
+    await ScenarioRunner(config).run()
+
+    results = {r.name: r for r in validate_trace(trace, "receipt_reputation_capsule")}
+    anchored = results["receipt_reputation_anchored"]
+    assert not anchored.passed
+    assert "does not anchor" in anchored.detail
 
 
 @pytest.mark.asyncio
 async def test_capsule_scenario_trace_is_deterministic(tmp_path: Path) -> None:
-    """Same seed -> byte-identical trace (the pre-anchor fixtures rely on this)."""
+    """Same seed -> byte-identical trace (the pre-anchored fixtures rely on this)."""
     t1, t2 = tmp_path / "a.jsonl", tmp_path / "b.jsonl"
     await ScenarioRunner(_config(t1, seed=42)).run()
     await ScenarioRunner(_config(t2, seed=42)).run()

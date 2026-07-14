@@ -28,7 +28,7 @@ from typing import Any
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from nest_core.canonical import SEAL_CHAIN_GENESIS, jcs_digest, seal_chain
-from nest_core.ccf_receipt import PINNED_ACL_SERVICE_IDENTITY_PEM
+from nest_core.ccf_receipt import PINNED_ACL_SERVICE_IDENTITY_PEM, compute_claims_digest
 from nest_core.validators import validate_receipt_reputation_anchored
 from nest_mocks.ccf_ledger import (
     WRONG_SERVICE_LABEL,
@@ -233,10 +233,10 @@ def test_non_anchoring_baseline_fails() -> None:
 def test_forged_receipt_json_fails() -> None:
     """ccfreceipt lines fabricated from plaintext (no ledger signature) -> FAIL.
 
-    A forger can compute every digest and every *unsigned* receipt field —
-    leaf components, a self-consistent proof — but cannot produce the service
-    identity's signature over the head, nor a node cert the pinned identity
-    endorses.
+    A forger can compute every digest and every *unsigned* field — a binding
+    application claim, self-consistent leaf components, a proof — but cannot
+    produce the service identity's signature over the head, nor a node cert
+    the pinned identity endorses.
     """
     receipts = _receipts()
     ledger = LocalTestConfidentialLedger()
@@ -244,15 +244,30 @@ def test_forged_receipt_json_fails() -> None:
     events.append(_score_event())
     for r in receipts:
         digest = jcs_digest(r)
+        claims: list[dict[str, Any]] = [
+            {
+                "kind": "LedgerEntry",
+                "ledgerEntry": {
+                    "collectionId": "subledger:0",
+                    "contents": digest,
+                    "protocol": "LedgerEntryV1",
+                    "secretKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                },
+            }
+        ]
         forged: dict[str, Any] = {
-            "cert": "-----BEGIN CERTIFICATE-----\nZm9yZ2Vk\n-----END CERTIFICATE-----\n",
-            "leaf_components": {
-                "write_set_digest": "00" * 32,
-                "commit_evidence": "ce:2.0:forged",
-                "claims_digest": hashlib.sha256(bytes.fromhex(digest)).hexdigest(),
+            "receipt": {
+                "cert": "-----BEGIN CERTIFICATE-----\nZm9yZ2Vk\n-----END CERTIFICATE-----\n",
+                "leafComponents": {
+                    "claimsDigest": compute_claims_digest(claims, bytes.fromhex(digest)).hex(),
+                    "commitEvidence": "ce:2.0:forged",
+                    "writeSetDigest": "00" * 32,
+                },
+                "nodeId": "00" * 32,
+                "proof": [],
+                "signature": "AAAA",
             },
-            "proof": [],
-            "signature": "AAAA",
+            "applicationClaims": claims,
         }
         events.append(_ccf_event(digest, forged))
     result = _anchored_with(events, ledger.service_identity_pem)
@@ -312,22 +327,20 @@ def test_partial_coverage_fails() -> None:
     assert "1/3" in result.detail
 
 
-def test_default_pinned_identity_is_fail_closed() -> None:
-    """The registry path (no injected identity) must FAIL even on signed evidence.
+def test_test_ledger_evidence_fails_the_production_pin() -> None:
+    """The registry path (pinned PRODUCTION identity) rejects test-ledger evidence.
 
-    ``PINNED_ACL_SERVICE_IDENTITY_PEM`` is still the TODO placeholder (None),
-    and the LOCAL TEST-ONLY identity must never satisfy the production gate: a
-    graded run can only PASS once the real ledger service identity is pinned
-    and its receipts are on the trace.
+    ``PINNED_ACL_SERVICE_IDENTITY_PEM`` is now the real Azure Confidential
+    Ledger service identity. The LOCAL TEST-ONLY ledger's keys are publicly
+    derivable, so its output must never satisfy the production gate — only
+    receipts signed by the real ledger can.
     """
-    assert PINNED_ACL_SERVICE_IDENTITY_PEM is None, (
-        "production identity landed — retire this guard and the placeholder branch test"
-    )
+    assert PINNED_ACL_SERVICE_IDENTITY_PEM is not None, "production service identity must be pinned"
     receipts = _receipts()
     ledger = LocalTestConfidentialLedger()
-    result = _anchored(_honest_trace(receipts, ledger))  # registry path: no identity
+    result = _anchored(_honest_trace(receipts, ledger))  # registry path: production pin
     assert not result.passed
-    assert "failing closed" in result.detail
+    assert "no confidential-ledger write receipt that verifies" in result.detail
 
 
 def test_verdict_is_deterministic_and_cwd_independent(tmp_path: Path) -> None:
