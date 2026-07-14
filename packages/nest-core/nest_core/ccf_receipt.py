@@ -67,12 +67,24 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.x509 import Certificate, load_pem_x509_certificate
 
 #: The pinned service identity of the production transparency service — the
-#: Azure Confidential Ledger instance at ``https://aac.confidential-ledger.azure.com``
-#: (self-signed ``CN=CCF Service``), fetched ONCE at the operator-gated setup
-#: step (2026-07-14) and pinned here as the root of trust. The committed
-#: write-receipt fixtures under
+#: Azure Confidential Ledger instance ``AAC`` in resource group ``asg-scitt``
+#: at ``https://aac.confidential-ledger.azure.com`` (``CN=CCF Service``,
+#: self-signed as Azure ACL produces), fetched on 2026-07-14 (transactions
+#: ``2.47``–``2.103``, api-version ``2023-01-18-preview``) and pinned here as
+#: the root of trust. The committed write-receipt fixtures under
 #: ``nest_plugins_reference/trust/ccf_receipts/`` verify against exactly this
 #: certificate; nothing else is trusted.
+#:
+#: **Provenance / independent verification:** this is a genuine Microsoft Azure
+#: Confidential Ledger cert, not a local CCF instance. Verify with:
+#:
+#: .. code-block:: bash
+#:
+#:     curl -s https://identity.confidential-ledger.core.azure.com/ledgerIdentity/aac \
+#:       | python3 -c "import sys,json; print(json.load(sys.stdin)['ledgerTlsCertificate'])"
+#:
+#: Expected SHA-256 of PEM bytes:
+#: ``905da11bf6bfa02195d8db52e4d128bc2df128d32d54be74a5dc49c85504facf``
 PINNED_ACL_SERVICE_IDENTITY_PEM: str | None = """-----BEGIN CERTIFICATE-----
 MIIBkTCCATegAwIBAgIRAP1MNpdTmVTsufP3qgQ9O6wwCgYIKoZIzj0EAwIwFjEU
 MBIGA1UEAwwLQ0NGIFNlcnZpY2UwHhcNMjYwNzE0MTYyMjM0WhcNMjYxMDEyMTYy

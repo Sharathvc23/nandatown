@@ -9,6 +9,32 @@ the ledger's service identity — issued by the independent ledger whose
 service identity is pinned in
 `nest_core.ccf_receipt.PINNED_ACL_SERVICE_IDENTITY_PEM`.
 
+## Root-of-trust provenance
+
+The pinned cert was obtained from a real **Microsoft Azure Confidential Ledger**
+(not a local CCF instance). Provenance:
+
+| Field | Value |
+|---|---|
+| Ledger name | `AAC` |
+| Resource group | `asg-scitt` |
+| Ledger URI | `https://aac.confidential-ledger.azure.com` |
+| Transactions | `2.47`–`2.103` (29 entries; api-version `2023-01-18-preview`) |
+| Date registered | 2026-07-14 |
+
+**To verify the pin independently** (confirm it matches genuine Azure ACL):
+
+```bash
+curl -s https://identity.confidential-ledger.core.azure.com/ledgerIdentity/aac \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['ledgerTlsCertificate'])"
+```
+
+Expected SHA-256 of PEM bytes:
+`905da11bf6bfa02195d8db52e4d128bc2df128d32d54be74a5dc49c85504facf`
+
+The Azure identity service endpoint is independent of the ledger's operational
+state; it returns the service cert even after the ledger is decommissioned.
+
 How they got here (operator-gated, out of band — network is allowed only in
 this setup step, never in a graded run): `scripts/preanchor_acl_receipts.py`
 ran the deterministic `receipt_reputation_capsule` scenario, appended each
