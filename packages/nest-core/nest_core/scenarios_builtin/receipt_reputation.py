@@ -262,6 +262,16 @@ class AuditorAgent(StateMachineAgent):
             seals = cast("list[tuple[int, str, str]]", seal_fn())
             for seq, subject_digest, chain_hash in seals:
                 await ctx.broadcast(f"seal:{seq}:{subject_digest}:{chain_hash}".encode())
+        # Anchoring evidence: pre-obtained confidential-ledger write receipts,
+        # one line per anchored receipt. Only these lines can satisfy the
+        # anchored validator — they carry the ledger service-identity signature
+        # the participant cannot forge. A plugin without the hook (or with an
+        # empty store) emits nothing and the anchored check fails closed.
+        ccf_fn = getattr(self._trust, "ccf_receipt_events", None)
+        if callable(ccf_fn):
+            pairs = cast("list[tuple[str, str]]", ccf_fn())
+            for subject_digest, receipt_hex in pairs:
+                await ctx.broadcast(f"ccfreceipt:{subject_digest}:{receipt_hex}".encode())
 
 
 def _partition(

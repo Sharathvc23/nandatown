@@ -3,9 +3,14 @@
 
 Drop-in replacement for ``AgentReceiptsTrust``: every corroborated receipt is
 sealed into an in-memory chain of JCS digests instead of writing to a capsule
-ledger on disk. The chain is later broadcast by the auditor as ``seal:`` trace
-events, which the ``receipt_reputation_capsule`` validator grades from the
-deterministic trace alone — no filesystem, no network, no external package.
+ledger on disk. The anchoring *evidence*, however, is not the chain — it is
+the pre-obtained CCF / Azure Confidential Ledger write receipt per sealed
+receipt (see :func:`load_committed_ccf_receipts`), which the auditor
+broadcasts as ``ccfreceipt:`` trace events and the
+``receipt_reputation_capsule`` validator verifies OFFLINE against the pinned
+ledger service identity. The ``seal:`` events are still broadcast as a tamper
+trip-wire, but they are a pure function of plaintext trace content and can
+never produce a PASS on their own.
 
 Three gates for a receipt to build reputation:
 
@@ -30,7 +35,11 @@ import hashlib
 import json
 import logging
 import math
-from typing import Any, cast
+from importlib import resources
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
@@ -51,6 +60,45 @@ from nest_plugins_reference.trust.agent_receipts import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM = "ed25519"
+
+#: Name of the committed-fixture directory holding pre-obtained confidential-
+#: ledger write receipts, one ``<receipt_jcs_digest>.receipt.json`` per receipt.
+_CCF_FIXTURE_DIR = "ccf_receipts"
+_CCF_FIXTURE_SUFFIX = ".receipt.json"
+
+
+def load_committed_ccf_receipts() -> dict[str, bytes]:
+    """Load the committed confidential-ledger write-receipt fixtures, if any.
+
+    The fixtures are obtained OUT OF BAND (the operator-gated pre-anchor step
+    registers each receipt's JCS digest as a claim with the real Azure
+    Confidential Ledger and commits the returned write receipts), keyed by
+    receipt digest. This read happens at plugin construction — the *run* side.
+    The validator's verdict path never touches the filesystem: it sees only
+    what the auditor broadcast onto the trace.
+
+    Returns ``{}`` when no fixtures are committed yet, which fails closed: the
+    auditor then emits no ``ccfreceipt:`` lines and the anchored validator
+    grades FAIL.
+
+    Example::
+
+        store = load_committed_ccf_receipts()
+    """
+    out: dict[str, bytes] = {}
+    try:
+        fixture_dir = resources.files(__package__) / _CCF_FIXTURE_DIR
+        for entry in fixture_dir.iterdir():
+            if not entry.name.endswith(_CCF_FIXTURE_SUFFIX):
+                continue
+            digest = entry.name[: -len(_CCF_FIXTURE_SUFFIX)]
+            if len(digest) != 64:
+                continue
+            out[digest] = entry.read_bytes()
+    except (OSError, TypeError, ValueError):
+        return {}
+    return out
+
 
 # ---------------------------------------------------------------------------
 # Self-contained scoring helpers.
@@ -245,10 +293,21 @@ class CapsuleEmitTrust:
 
     _SYSTEM_AGENT = AgentId("trust:capsule_emit")
 
-    def __init__(self, identity: Any = None) -> None:
+    def __init__(
+        self,
+        identity: Any = None,
+        ccf_receipts: Mapping[str, bytes] | None = None,
+    ) -> None:
         self._identity = identity
         self._system_seed = hashlib.sha256(b"trust:capsule_emit").digest()[:32]
         self._receipts: list[dict[str, Any]] = []
+        # Pre-obtained confidential-ledger write receipts, keyed by receipt JCS
+        # digest. Defaults to the committed fixtures (empty until the operator-
+        # gated pre-anchor step lands them — fail-closed). Tests inject a store
+        # minted by the LOCAL TEST-ONLY confidential ledger.
+        self._ccf_receipts: dict[str, bytes] = (
+            dict(ccf_receipts) if ccf_receipts is not None else load_committed_ccf_receipts()
+        )
         # In-memory sealing state:
         #   _seals: ordered list of (seq, subject_digest, chain_hash) triples
         #   _chain: the running chain hash (starts at SEAL_CHAIN_GENESIS)
@@ -311,6 +370,27 @@ class CapsuleEmitTrust:
         and verify the chain without touching the filesystem.
         """
         return list(self._seals)
+
+    def ccf_receipt_events(self) -> list[tuple[str, str]]:
+        """Return ``(subject_digest, receipt_json_hex)`` pairs — the anchoring evidence.
+
+        One pair per sealed receipt whose digest has a pre-obtained
+        confidential-ledger write receipt in the store. The auditor hook
+        broadcasts each as a ``ccfreceipt:<subject_digest>:<receipt_json_hex>``
+        trace line; the anchored validator verifies the write receipt offline
+        against the pinned ledger service identity. A digest with no stored
+        receipt yields nothing — the validator then fails that receipt, closed.
+
+        Example::
+
+            pairs = plugin.ccf_receipt_events()
+        """
+        out: list[tuple[str, str]] = []
+        for _seq, digest, _chain in self._seals:
+            blob = self._ccf_receipts.get(digest)
+            if blob is not None:
+                out.append((digest, blob.hex()))
+        return out
 
     async def score(self, agent: AgentId) -> ReputationScore:
         """Reputation from corroborated, ring-severed, in-memory-anchored receipts.

@@ -213,3 +213,55 @@ async def test_seal_events_returned() -> None:
         assert seq == i
         assert len(subject_digest) == 64  # hex SHA-256
         assert len(chain_hash) == 64
+
+
+@pytest.mark.asyncio
+async def test_ccf_receipt_events_from_injected_store() -> None:
+    """The plugin emits (digest, receipt_hex) pairs only for digests in its store."""
+    from nest_core.canonical import jcs_digest
+
+    issuer_seed = hashlib.sha256(b"ccf-agent").digest()[:32]
+    cp_seed = hashlib.sha256(b"ccf-cp").digest()[:32]
+    agent = AgentId("ccf-agent")
+
+    covered = _make_corroborated_receipt(issuer_seed, cp_seed, action_id="covered")
+    uncovered = _make_corroborated_receipt(issuer_seed, cp_seed, action_id="uncovered")
+    store = {jcs_digest(covered): b'{"fake": "write receipt bytes"}'}
+
+    plugin = CapsuleEmitTrust(ccf_receipts=store)
+    for receipt in (covered, uncovered):
+        ev = Evidence(
+            reporter=AgentId("ccf-cp"),
+            subject=agent,
+            kind="positive",
+            detail=json.dumps(receipt),
+        )
+        await plugin.report(agent, ev)
+
+    pairs = plugin.ccf_receipt_events()
+    assert pairs == [(jcs_digest(covered), b'{"fake": "write receipt bytes"}'.hex())], (
+        "exactly the covered digest, carrying the stored receipt bytes"
+    )
+
+
+@pytest.mark.asyncio
+async def test_ccf_receipt_events_empty_without_fixtures() -> None:
+    """Default construction (no committed fixtures yet) emits no evidence — fail-closed."""
+    issuer_seed = hashlib.sha256(b"nofix-agent").digest()[:32]
+    cp_seed = hashlib.sha256(b"nofix-cp").digest()[:32]
+    agent = AgentId("nofix-agent")
+
+    plugin = CapsuleEmitTrust()
+    receipt = _make_corroborated_receipt(issuer_seed, cp_seed)
+    ev = Evidence(
+        reporter=AgentId("nofix-cp"),
+        subject=agent,
+        kind="positive",
+        detail=json.dumps(receipt),
+    )
+    await plugin.report(agent, ev)
+
+    assert plugin.seal_events(), "the receipt is sealed"
+    assert plugin.ccf_receipt_events() == [], (
+        "no committed write-receipt fixtures -> no anchoring evidence emitted"
+    )
