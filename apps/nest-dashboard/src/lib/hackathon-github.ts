@@ -266,12 +266,6 @@ async function fetchAllPRs(): Promise<GitHubPR[]> {
   return [...byNumber.values()];
 }
 
-function isHackathonPR(pr: GitHubPR): boolean {
-  if (pr.head.ref.startsWith("hackathon/")) return true;
-  const title = pr.title.toLowerCase();
-  return title.includes("[hackathon]") || title.includes("[nandahack]");
-}
-
 function toSubmission(pr: GitHubPR): Submission {
   const branch = pr.head.ref;
   const { handle, theme } = extractHandleAndTheme(branch);
@@ -312,14 +306,13 @@ function toSubmission(pr: GitHubPR): Submission {
 }
 
 /**
- * Fetch and assemble the live dataset: every open or merged hackathon PR,
- * classified into its layer (or "Other"), merged entries flagged.
- * Closed-but-unmerged PRs are dropped.
+ * Fetch and assemble the live dataset: every open or merged PR on the repo
+ * (hackathon or not), classified into its layer (or "Other"), merged entries
+ * flagged. Closed-but-unmerged PRs are dropped.
  */
 async function buildLiveDataset(): Promise<Dataset> {
   const prs = await fetchAllPRs();
   const submissions = prs
-    .filter(isHackathonPR)
     .filter((pr) => pr.state === "open" || pr.merged_at !== null)
     .map(toSubmission)
     .sort((a, b) =>

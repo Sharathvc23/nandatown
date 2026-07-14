@@ -1,7 +1,7 @@
 /**
- * /hackathon — the PR Gallery.
+ * /prgallery — the PR Gallery.
  *
- * A live view of every hackathon pull request on projnanda/nandatown,
+ * A live view of every pull request on projnanda/nandatown,
  * synced straight from GitHub: the twelve protocol layers plus Other,
  * followed by the full PR feed with merged submissions pinned first.
  * The GitHub webhook busts the cache the moment a PR merges, so merges
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "PR Gallery — Nanda Town",
   description:
-    "Every NandaHack pull request, live from GitHub: the twelve protocol layers plus Other, with merged PRs landing in their layer the moment they merge.",
+    "Every pull request on projnanda/nandatown, live from GitHub: the twelve protocol layers plus Other, with merged PRs landing in their layer the moment they merge.",
 };
 
 export default async function PRGalleryPage() {
@@ -50,7 +50,7 @@ export default async function PRGalleryPage() {
               <span className="italic text-ink-700">gallery</span>.
             </h1>
             <p className="animate-fade-in stagger-2 text-[1.05rem] leading-[1.6] text-ink-500 max-w-md">
-              Every hackathon pull request on projnanda/nandatown, synced
+              Every pull request on projnanda/nandatown, synced
               straight from GitHub. Twelve protocol layers plus Other &mdash;
               merged PRs land in their layer the moment they merge.
             </p>
@@ -139,7 +139,7 @@ export default async function PRGalleryPage() {
           {submissions.length === 0 ? (
             <EmptyState
               title="No submissions yet."
-              body="GitHub couldn't be reached when the dataset was last built, or no hackathon/* PRs are open. Try again in five minutes."
+              body="GitHub couldn't be reached when the dataset was last built, or no PRs are open. Try again in five minutes."
             />
           ) : (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

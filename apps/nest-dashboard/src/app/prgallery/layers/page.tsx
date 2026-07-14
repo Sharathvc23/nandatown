@@ -1,5 +1,5 @@
 /**
- * /hackathon/layers — the 12-layer grid.
+ * /prgallery/layers — the 12-layer grid.
  *
  * One card per layer. Shows submission count, top score, and an
  * "open for submissions" affordance on empty layers.
@@ -14,12 +14,12 @@ import { loadDataset } from "@/lib/hackathon";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Hackathon layers — Nanda Town",
+  title: "PR Gallery layers — Nanda Town",
   description:
-    "Browse hackathon submissions by the 12 Nanda Town protocol layers.",
+    "Browse every pull request by the 12 Nanda Town protocol layers.",
 };
 
-export default async function HackathonLayersPage() {
+export default async function GalleryLayersPage() {
   const data = await loadDataset();
 
   return (
@@ -31,7 +31,7 @@ export default async function HackathonLayersPage() {
               href="/prgallery"
               className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
             >
-              ← Hackathon
+              ← PR Gallery
             </Link>
           </div>
 
