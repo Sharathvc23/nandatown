@@ -281,15 +281,6 @@ export default function Home() {
                 prompt="Abstract composition of overlapping translucent warm orange and beige rectangles, layered like protocol stacks. Slight rotation, hand-cut paper aesthetic, subtle drop shadows. Each rectangle is a different shade of cream/rust. Quiet, editorial, scientific-but-warm. No text. Palette: #F0EDE4, #E8E4D6, #C45A3C, #6B6557."
                 caption="Section — the twelve layers"
               />
-              <div className="mt-10 max-w-md">
-                <p className="font-display text-[1.45rem] leading-snug italic text-ink-700">
-                  &ldquo;A protocol is a handshake written in code &mdash; and
-                  a handshake is worth a trial run before you shake on it.&rdquo;
-                </p>
-                <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
-                  Nanda Town design note &middot; 2026
-                </p>
-              </div>
             </div>
           </div>
         </div>

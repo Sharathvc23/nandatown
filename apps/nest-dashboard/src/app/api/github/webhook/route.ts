@@ -40,7 +40,7 @@ function bust() {
   revalidateTag(PR_CACHE_TAG, "max");
   // 'layout' invalidates /hackathon and everything beneath it (layers,
   // submissions) in one call.
-  revalidatePath("/hackathon", "layout");
+  revalidatePath("/prgallery", "layout");
 }
 
 export async function POST(req: NextRequest) {

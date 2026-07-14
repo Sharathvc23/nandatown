@@ -42,10 +42,6 @@ export default async function PRGalleryPage() {
       {/* Header */}
       <section className="paper-texture border-b border-cream-400/70">
         <div className="mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 pb-12">
-          <div className="flex items-center gap-3 mb-8 animate-fade-in">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-rust animate-pulse-dot" />
-            <span className="eyebrow">NandaHack &middot; live from GitHub</span>
-          </div>
 
           <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-end">
             <h1 className="font-display animate-fade-in stagger-1 text-[clamp(2.4rem,5.4vw,4.2rem)] leading-[1.04] tracking-tight text-ink-900">
@@ -96,7 +92,7 @@ export default async function PRGalleryPage() {
             {data.layers.map((layer, idx) => (
               <Link
                 key={layer.key}
-                href={`/hackathon/layers/${layer.key}`}
+                href={`/prgallery/layers/${layer.key}`}
                 className="group block rounded-2xl border border-cream-400/70 bg-cream-50 p-7 transition-colors hover:bg-cream-200/60"
               >
                 <div className="flex items-center justify-between">

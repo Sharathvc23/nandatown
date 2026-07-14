@@ -33,7 +33,7 @@ export default async function LayerPage({
         <div className="mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 pb-12">
           <div className="flex items-center gap-3 mb-8 animate-fade-in">
             <Link
-              href="/hackathon/layers"
+              href="/prgallery/layers"
               className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
             >
               ← Layers

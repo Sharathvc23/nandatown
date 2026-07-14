@@ -51,7 +51,7 @@ export function Footer() {
           </FooterColumn>
 
           <FooterColumn title="NandaHack">
-            <FooterLink href="/hackathon">PR Gallery</FooterLink>
+            <FooterLink href="/prgallery">PR Gallery</FooterLink>
             <FooterLink href="/skills">Vote on SkillMDs</FooterLink>
             <FooterLink href={hackathonEvent.officialUrl} external>
               Official site

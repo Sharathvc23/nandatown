@@ -28,7 +28,7 @@ export default async function HackathonLayersPage() {
         <div className="mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 pb-12">
           <div className="flex items-center gap-3 mb-8 animate-fade-in">
             <Link
-              href="/hackathon"
+              href="/prgallery"
               className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
             >
               ← Hackathon
@@ -57,7 +57,7 @@ export default async function HackathonLayersPage() {
             {data.layers.map((layer, idx) => (
               <Link
                 key={layer.key}
-                href={`/hackathon/layers/${layer.key}`}
+                href={`/prgallery/layers/${layer.key}`}
                 className="group block rounded-2xl border border-cream-400/70 bg-cream-50 p-7 transition-colors hover:bg-cream-200/60"
               >
                 <div className="flex items-center justify-between">

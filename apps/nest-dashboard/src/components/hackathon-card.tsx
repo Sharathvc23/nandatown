@@ -64,7 +64,7 @@ export function StatusBadge({ submission }: { submission: Submission }) {
 export function SubmissionCard({ submission }: { submission: Submission }) {
   return (
     <Link
-      href={`/hackathon/submissions/${submission.id}`}
+      href={`/prgallery/submissions/${submission.id}`}
       className="group block rounded-2xl border border-cream-400/70 bg-cream-50 p-6 transition-colors hover:bg-cream-200/60"
     >
       <div className="flex items-start gap-4">

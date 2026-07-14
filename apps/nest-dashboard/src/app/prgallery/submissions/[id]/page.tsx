@@ -54,14 +54,14 @@ export default async function SubmissionPage({
         <div className="mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 pb-12">
           <div className="flex flex-wrap items-center gap-4 mb-8 animate-fade-in">
             <Link
-              href="/hackathon"
+              href="/prgallery"
               className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
             >
               ← Hackathon
             </Link>
             {layer && (
               <Link
-                href={`/hackathon/layers/${layer.key}`}
+                href={`/prgallery/layers/${layer.key}`}
                 className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
               >
                 ↳ {layer.label} layer
