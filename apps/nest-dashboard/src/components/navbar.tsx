@@ -15,6 +15,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { href: "/agents", label: "Agents" },
+  { href: "/prgallery", label: "PR Gallery" },
   { href: "/experiments", label: "Experiments" },
   { href: "/leaderboard", label: "Leaderboard" },
   {
@@ -23,30 +24,8 @@ const items: NavItem[] = [
     external: true,
     children: [
       { href: "/skills", label: "Skills Registry (NandaHack)" },
-      { href: "/hackathon", label: "Hackathon Hub · FAQs" },
-      { href: "https://lu.ma/a98t3dze", label: "Info Session · Jul 7" },
-      { href: "/summit", label: "Nanda Summit + NandaHack Demos @ MIT · Jul 11" },
     ],
   },
-  {
-    href: "/guides",
-    label: "Contribution Guide",
-    children: [
-      { href: "/guides/demo", label: "Live Demo" },
-      { href: "/guides/skillmd", label: "Build a SkillMD" },
-    ],
-  },
-  {
-    href: "/onboarding",
-    label: "Partner With Us",
-    children: [
-      { href: "/onboarding/individuals", label: "Individuals" },
-      { href: "/onboarding/startups", label: "Startups" },
-      { href: "/onboarding/companies", label: "Corporate" },
-    ],
-  },
-  { href: "/onboarding/submit", label: "Submit a Contribution" },
-  { href: "/showcase", label: "Live Showcase" },
   { href: "/visualizer", label: "Visualizer" },
   { href: "/docs", label: "Docs" },
 ];
