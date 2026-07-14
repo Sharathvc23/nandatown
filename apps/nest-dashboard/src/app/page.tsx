@@ -281,6 +281,16 @@ export default function Home() {
                 prompt="Abstract composition of overlapping translucent warm orange and beige rectangles, layered like protocol stacks. Slight rotation, hand-cut paper aesthetic, subtle drop shadows. Each rectangle is a different shade of cream/rust. Quiet, editorial, scientific-but-warm. No text. Palette: #F0EDE4, #E8E4D6, #C45A3C, #6B6557."
                 caption="Section — the twelve layers"
               />
+              <div className="mt-8">
+                <p className="eyebrow">The stack</p>
+                <p className="mt-4 text-[1.05rem] leading-[1.65] text-ink-500 max-w-md">
+                  Every agent interaction in Nanda Town runs through twelve open
+                  protocol layers &mdash; from transport and identity up through
+                  payments, trust, and shared memory. Pick one plugin per layer
+                  and you have a working agent; swap a plugin and the rest of the
+                  stack keeps running.
+                </p>
+              </div>
             </div>
           </div>
         </div>
