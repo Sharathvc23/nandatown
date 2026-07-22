@@ -43,15 +43,15 @@ export function Footer() {
           </div>
 
           <FooterColumn title="Platform">
-            <FooterLink href="/agents">Agents</FooterLink>
+            <FooterLink href="/prgallery">PR Gallery</FooterLink>
+            <FooterLink href="/contribute">Contribute</FooterLink>
             <FooterLink href="/experiments">Experiments</FooterLink>
             <FooterLink href="/leaderboard">Leaderboard</FooterLink>
             <FooterLink href="/visualizer">Visualizer</FooterLink>
-            <FooterLink href="/skills">Skills</FooterLink>
+            <FooterLink href="/agents">Agents</FooterLink>
           </FooterColumn>
 
           <FooterColumn title="NandaHack">
-            <FooterLink href="/prgallery">PR Gallery</FooterLink>
             <FooterLink href="/skills">Vote on SkillMDs</FooterLink>
             <FooterLink href={hackathonEvent.officialUrl} external>
               Official site

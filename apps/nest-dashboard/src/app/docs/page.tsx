@@ -14,7 +14,7 @@ interface TocItem {
 
 const TOC: TocItem[] = [
   { id: 'overview', label: 'Overview' },
-  { id: 'hackathon', label: 'Join the hackathon' },
+  { id: 'hackathon', label: 'NandaHack (concluded)' },
   { id: 'startups', label: 'For startups & companies' },
   { id: 'tiers', label: 'Tier 1 vs Tier 2' },
   { id: 'installation', label: 'Installation' },
@@ -335,7 +335,8 @@ export default function DocsPage() {
           <Section id="overview" title="Overview">
             <p className="mb-5 text-[1.05rem] leading-[1.7] text-ink-500">
               Nanda Town is a sandbox for testing how AI agents talk to each
-              other. Think of it like a flight simulator, but for agents. You
+              other. Think of it like a flight simulator, but for agents. The engine and
+              CLI are called nest, Nanda Town&rsquo;s original codename. You
               write a scenario in a YAML file &mdash; who the agents are, what
               roles they play, which rules they follow, and what can go wrong.
               Nanda Town runs it and saves every message to a JSONL file you
@@ -384,20 +385,24 @@ export default function DocsPage() {
           <div className="h-px bg-cream-400/70" />
 
           {/* Hackathon */}
-          <Section id="hackathon" eyebrow={hackathonEvent.name} title="Join the hackathon">
+          <Section id="hackathon" eyebrow={hackathonEvent.name} title="About NandaHack">
             <p className="mb-5 text-[1.05rem] leading-[1.7] text-ink-500">
-              {hackathonEvent.name} is an agentic-AI hackathon by Project NANDA,
-              HCLTech, and the MIT Media Lab. You build an agentic AI app inside
-              the Nanda Town sandbox using the <InlineCode>SKILL.md</InlineCode>{' '}
-              framework, then submit it as a GitHub pull request. It runs entirely
-              online, so anyone can take part from anywhere &mdash; no travel and
-              no ticket required.
+              {hackathonEvent.name} was an agentic-AI hackathon by Project NANDA,
+              HCLTech, and the MIT Media Lab. Builders made agentic AI apps
+              inside the Nanda Town sandbox using the{' '}
+              <InlineCode>SKILL.md</InlineCode> framework and submitted them as
+              GitHub pull requests. It ran entirely online from June 7 to July
+              11, 2026. Audience Choice voting on SkillMDs stays open through
+              August 11, 2026 on the{' '}
+              <a href="/skills" className="text-rust hover:text-rust/80 underline underline-offset-2">
+                Skills page
+              </a>.
             </p>
 
             <div className="mb-8 grid gap-3 sm:grid-cols-2">
               {[
-                { k: 'Build window', v: hackathonEvent.virtualWindow, note: 'Virtual — build from anywhere.' },
-                { k: 'Submissions due', v: hackathonEvent.submissionDeadline, note: 'Hard deadline, wherever you build.' },
+                { k: 'Build window', v: hackathonEvent.virtualWindow, note: 'Virtual. Teams built from anywhere.' },
+                { k: 'Submissions closed', v: hackathonEvent.submissionDeadline, note: 'The deadline has passed.' },
                 { k: 'Finale', v: hackathonEvent.finale, note: 'Optional. Does not affect your score.' },
               ].map((d) => (
                 <div key={d.k} className="rounded-xl bg-cream-200 p-6">
@@ -415,14 +420,13 @@ export default function DocsPage() {
             </div>
 
             <p className="mb-4 text-[1.05rem] leading-[1.7] text-ink-900">
-              <strong>How to enter, in three steps</strong>
+              <strong>How entries worked, in three steps</strong>
             </p>
             <ol className="mb-6 ml-5 list-decimal space-y-3 text-[1.02rem] leading-[1.7] text-ink-500 marker:font-mono marker:text-ink-300">
               <li>
                 <strong className="text-ink-900">Build in the sandbox.</strong>{' '}
-                Pick one or more of the twelve layers and build a protocol or
-                plugin &mdash; or wire in your own live service. The repo README
-                walks you through setup.
+                Teams picked one or more of the twelve layers and built a
+                protocol or plugin, or wired in their own live service.
               </li>
               <li>
                 <strong className="text-ink-900">Write a SKILL.md.</strong> A
@@ -435,21 +439,15 @@ export default function DocsPage() {
               </li>
               <li>
                 <strong className="text-ink-900">Open a pull request.</strong>{' '}
-                Push a branch named{' '}
-                <InlineCode>hackathon/&lt;handle&gt;-&lt;theme&gt;</InlineCode> and
-                open a PR against the repo. That PR is your entry.
+                Entries were branches named{' '}
+                <InlineCode>hackathon/&lt;handle&gt;-&lt;theme&gt;</InlineCode>{' '}
+                with a PR against the repo. That PR was the entry.
               </li>
             </ol>
 
-            <CodeBlock title="Open your submission PR">{`git checkout -b hackathon/<your-handle>-<theme>
-git add .
-git commit -m "My NandaHack submission"
-git push origin hackathon/<your-handle>-<theme>
-# then open the PR at ${hackathonEvent.repoUrl}/pulls`}</CodeBlock>
-
             <p className="mt-6 mb-5 text-[1.05rem] leading-[1.7] text-ink-500">
-              A judge panel scores every submission on correctness, realism,
-              design, and documentation. At the finale, judging runs 9:30&nbsp;AM
+              A judge panel scored every submission on correctness, realism,
+              design, and documentation. At the finale, judging ran 9:30&nbsp;AM
               to noon to select the top&nbsp;10 teams, with demos and sessions
               from 2 to 5&nbsp;PM.
             </p>
@@ -505,7 +503,8 @@ git push origin hackathon/<your-handle>-<theme>
                 <a href="/skills" className="text-rust hover:text-rust/80 underline underline-offset-2">
                   Skills page
                 </a>
-                . Agents discover your service there and start calling it.
+                . Agents can discover your service there and call it in sandbox
+                runs today, and in the live town once it is running.
               </li>
             </ol>
 
@@ -524,10 +523,9 @@ git push origin hackathon/<your-handle>-<theme>
                 <a href="/skills" className="text-rust hover:text-rust/80 underline underline-offset-2">
                   Skills page
                 </a>
-                , or POST it from code to <InlineCode>/api/skills</InlineCode>. A
-                startup can enter the hackathon the same way: register a SKILL.md
-                and open a{' '}
-                <InlineCode>hackathon/&lt;handle&gt;-&lt;theme&gt;</InlineCode> PR.
+                , or POST it from code to <InlineCode>/api/skills</InlineCode>. During
+                the hackathon, startups entered the same way, with a registered
+                SKILL.md and a submission PR.
               </p>
             </div>
           </Section>
@@ -695,7 +693,7 @@ pip install "nest-core[plugins]"`}
             </CodeBlock>
             <p className="mt-3 mb-8 text-[0.95rem] text-ink-500">
               This installs the Nanda Town engine, the <InlineCode>nest</InlineCode>{' '}
-              command, the plugins for all 12 layers, and the seven
+              command, the plugins for all 12 layers, and the nine
               built-in scenarios. The venv keeps it separate from your other
               Python projects so nothing clashes.
             </p>
@@ -920,11 +918,14 @@ output:
               head={['File', 'Description', 'Agents']}
               rows={[
                 ['marketplace.yaml', 'Buyers and sellers negotiate prices', '50 buyers + 50 sellers'],
-                ['auction.yaml', 'Sealed-bid auction with auctioneer', '1 auctioneer + 49 bidders'],
-                ['voting.yaml', 'Proposer, voters, and coordinator', '1 proposer + 20 voters + 1 coordinator'],
+                ['auction.yaml', 'Sealed-bid auction with auctioneer', '1 auctioneer + 19 bidders'],
+                ['voting.yaml', 'Proposer, voters, and coordinator', '1 proposer + 1 coordinator + 18 voters'],
                 ['consensus.yaml', 'Leader-based quorum voting', '1 leader + 19 followers'],
                 ['supply_chain.yaml', '4-hop supply chain pipeline', 'supplier, manufacturer, distributor, retailer'],
-                ['reputation.yaml', 'Honest and malicious traders with observer', '6 honest + 2 malicious + 1 observer'],
+                ['reputation.yaml', 'Honest and malicious traders with observer', '16 honest + 4 malicious + 1 observer'],
+                ['gossip_registry.yaml', 'Gossip-based registry under partition', '10 + 10 nodes + 1 bridge'],
+                ['escrow_marketplace.yaml', 'Escrowed trades with arbiters', '3 buyers + 3 sellers + 3 arbiters'],
+                ['shell_marketplace.yaml', 'LLM-backed buyers and sellers (mock backend)', '3 buyers + 3 sellers'],
               ]}
               monoFirstCol
             />
@@ -946,7 +947,7 @@ output:
               head={['Layer', 'What it does', 'Default']}
               rows={[
                 ['Transport', 'Carries messages between agents', 'in_memory'],
-                ['Comms', 'Sets the shape of each message', 'nest_native'],
+                ['Communication (comms)', 'Sets the shape of each message', 'nest_native'],
                 ['Identity', 'Gives each agent an ID and checks it', 'did_key'],
                 ['Registry', 'Helps agents find each other', 'in_memory'],
                 ['Auth', 'Handles logins and permissions', 'jwt'],
@@ -1104,6 +1105,12 @@ my_decay = "my_trust.plugin:DecayTrust"`}
 {`layers:
   trust: my_decay  # Uses your custom plugin`}
             </CodeBlock>
+            <p className="mt-6 text-[1.05rem] leading-[1.7] text-ink-500">
+              Ready to share it? Open a pull request with the protocol
+              description, the plugin, and a test that proves it holds up. See{' '}
+              <a href="https://github.com/projnanda/nandatown/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className="text-rust underline underline-offset-4">CONTRIBUTING.md</a>{' '}
+              for the process and the <a href="/prgallery" className="text-rust underline underline-offset-4">PR gallery</a> for merged examples.
+            </p>
           </Section>
 
           <div className="h-px bg-cream-400/70" />
@@ -1120,7 +1127,7 @@ my_decay = "my_trust.plugin:DecayTrust"`}
               head={['Command', 'Description']}
               rows={[
                 ['nest run <name | path.yaml>', 'Run a built-in scenario by name, or your own YAML file, and save the trace'],
-                ['nest scenarios list / show / cp', 'List, print, or copy the seven built-in scenarios'],
+                ['nest scenarios list / show / cp', 'List, print, or copy the nine built-in scenarios'],
                 ['nest inspect <trace.jsonl>', 'Print a summary of events and per-agent stats'],
                 ['nest report <trace.jsonl>', 'Make an HTML report of the numbers'],
                 ['nest init <name>', 'Start a new scenario YAML for you to fill in'],
@@ -1212,7 +1219,7 @@ my_decay = "my_trust.plugin:DecayTrust"`}
                     (the quotes matter on zsh &mdash; without them the shell
                     reads <InlineCode>[plugins]</InlineCode> as a file pattern). Then run{' '}
                     <InlineCode>nest scenarios list</InlineCode> to check
-                    the seven built-in scenarios show up.
+                    the nine built-in scenarios show up.
                   </>
                 }
               />

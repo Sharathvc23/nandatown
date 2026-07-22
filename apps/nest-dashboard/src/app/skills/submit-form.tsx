@@ -129,7 +129,7 @@ export function SubmitForm() {
           className={inputClass}
         />
         <p className="mt-2 text-[0.82rem] text-ink-400">
-          So we can find your hackathon PR. Just the handle — not the full URL.
+          If you took part in NandaHack, this matches your submission to your hackathon PR. Just the handle, not the full URL.
         </p>
       </div>
 

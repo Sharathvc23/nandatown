@@ -11,7 +11,7 @@ function s(value: unknown): string {
 
 /**
  * GET /api/skills
- * Returns every submitted SkillMD as JSON. An OpenClaw agent can call this to
+ * Returns every submitted SkillMD as JSON. An agent can call this to
  * discover which skills are available.
  */
 export async function GET() {

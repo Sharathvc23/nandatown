@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
+import { loadDataset } from '@/lib/hackathon';
+import { listSkillsCached } from '@/lib/skills';
 
 /* ------------------------------------------------------------------ */
 /*  Copy — sourced verbatim from the project one-pager.                 */
@@ -132,7 +135,23 @@ function RepoButton({ dark = false }: { dark?: boolean }) {
 /*  Page                                                               */
 /* ================================================================== */
 
-export default function Home() {
+export default async function Home() {
+  let prTotal: number | null = null;
+  let prMerged: number | null = null;
+  let skillTotal: number | null = null;
+  try {
+    const data = await loadDataset();
+    prTotal = data.stats.total_submissions;
+    prMerged = data.stats.total_merged;
+  } catch {
+    // GitHub unreachable; hide the counters rather than guess.
+  }
+  try {
+    skillTotal = (await listSkillsCached()).length;
+  } catch {
+    // Database unreachable; hide the counter rather than guess.
+  }
+
   return (
     <div className="bg-cream-100">
       {/* ============================================================ */}
@@ -160,10 +179,19 @@ export default function Home() {
 
             <div className="animate-fade-in stagger-3 lg:pt-2">
               <RepoButton />
-              <dl className="mt-10 grid grid-cols-2 gap-6 border-t border-cream-400/70 pt-6">
+              <div className="mt-10 grid grid-cols-2 gap-6 border-t border-cream-400/70 pt-6">
+                {prTotal !== null && (
+                  <Stat label="Pull requests" value={String(prTotal)} href="/prgallery" />
+                )}
+                {prMerged !== null && (
+                  <Stat label="Merged" value={String(prMerged)} href="/prgallery" />
+                )}
+                {skillTotal !== null && (
+                  <Stat label="SkillMDs" value={String(skillTotal)} href="/skills" />
+                )}
                 <Stat label="Protocol layers" value="12" />
                 <Stat label="License" value="Apache 2.0" />
-              </dl>
+              </div>
             </div>
           </div>
         </div>
@@ -302,6 +330,17 @@ export default function Home() {
                   ]}
                 />
               </p>
+              <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[0.9rem] font-medium">
+                <Link href="/contribute" className="text-ink-700 hover:text-ink-900 transition-colors">
+                  How to contribute &rarr;
+                </Link>
+                <Link href="/prgallery" className="text-ink-700 hover:text-ink-900 transition-colors">
+                  Browse merged PRs &rarr;
+                </Link>
+                <Link href="/skills" className="text-ink-700 hover:text-ink-900 transition-colors">
+                  Publish a SkillMD &rarr;
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-cream-400/70 bg-cream-200 p-8 sm:p-10">
@@ -317,6 +356,14 @@ export default function Home() {
                   ]}
                 />
               </p>
+              <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[0.9rem] font-medium">
+                <Link href="/prgallery/layers" className="text-ink-700 hover:text-ink-900 transition-colors">
+                  Explore the twelve layers &rarr;
+                </Link>
+                <Link href="/docs" className="text-ink-700 hover:text-ink-900 transition-colors">
+                  Read the docs &rarr;
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -394,15 +441,23 @@ export default function Home() {
 /*  Stat                                                                */
 /* ------------------------------------------------------------------ */
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
+function Stat({ label, value, href }: { label: string; value: string; href?: string }) {
+  const inner = (
+    <>
+      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300">
         {label}
-      </dt>
-      <dd className="mt-2 font-display text-[1.65rem] leading-none text-ink-900">
+      </p>
+      <p className="mt-2 font-display text-[1.65rem] leading-none text-ink-900">
         {value}
-      </dd>
-    </div>
+      </p>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="block transition-opacity hover:opacity-70">
+        {inner}
+      </Link>
+    );
+  }
+  return <div>{inner}</div>;
 }

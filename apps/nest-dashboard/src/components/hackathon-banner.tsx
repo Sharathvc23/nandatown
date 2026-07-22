@@ -17,7 +17,8 @@ export function HackathonBanner() {
             <span className="font-semibold text-cream-50">
               $1,000 Audience Choice Award
             </span>{" "}
-            for the NandaHack x HCLTech hackathon.
+            for the NandaHack x HCLTech hackathon. Voting is open through
+            August 11.
           </span>
         </span>
         <span className="flex items-center gap-4">

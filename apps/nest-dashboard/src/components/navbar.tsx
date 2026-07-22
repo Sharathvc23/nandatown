@@ -14,20 +14,25 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { href: "/agents", label: "Agents" },
   { href: "/prgallery", label: "PR Gallery" },
+  { href: "/skills", label: "Skills Registry" },
+  { href: "/contribute", label: "Contribute" },
+  { href: "/docs", label: "Docs" },
   { href: "/experiments", label: "Experiments" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/visualizer", label: "Visualizer" },
+  { href: "/agents", label: "Agents (demo)" },
   {
     href: "https://nandahack.media.mit.edu",
-    label: "NandaHack x HCLTech",
+    label: "NandaHacks",
     external: true,
     children: [
-      { href: "/skills", label: "Skills Registry (NandaHack)" },
+      {
+        href: "https://nandahack.media.mit.edu",
+        label: "NandaHack x HCLTech",
+      },
     ],
   },
-  { href: "/visualizer", label: "Visualizer" },
-  { href: "/docs", label: "Docs" },
 ];
 
 function NavList({

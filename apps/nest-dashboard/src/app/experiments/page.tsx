@@ -170,7 +170,7 @@ export default function ExperimentsPage() {
               probe behaviour.
             </h1>
             <p className="animate-fade-in stagger-2 text-[1.1rem] leading-[1.6] text-ink-500 max-w-md">
-              Explore the scenarios that ship with Nanda Town. Each one ran with
+              Explore a selection of the scenarios that ship with Nanda Town. Each one ran with
               the reference plugins &mdash; every metric here is reproducible
               from the seed in the YAML.
             </p>

@@ -478,9 +478,8 @@ export default function AgentsPage() {
             </h1>
 
             <p className="animate-fade-in stagger-2 text-[1.1rem] leading-[1.6] text-ink-500 lg:pt-6 max-w-md">
-              A live view of agents running on Nanda Town across
-              the world. Each dot is an agent; each line is a message exchanged
-              between clusters. The data is synthetic &mdash; built on a seeded
+              A preview of what the live town will look like. Each dot stands for
+              an agent; each line is a message exchanged between clusters. The data is synthetic &mdash; built on a seeded
               layout &mdash; and updates continuously.
             </p>
           </div>
@@ -490,10 +489,8 @@ export default function AgentsPage() {
       {/* Stats */}
       <section className="border-b border-cream-400/70">
         <div className="mx-auto max-w-[1240px] px-6 sm:px-10 py-12 grid grid-cols-2 md:grid-cols-4 gap-10">
-          <Stat label="Agents" value={String(totalAgents)} hint="across all clusters" />
-          <Stat label="Clusters" value={String(clusters.length)} hint="major regions" />
-          <Stat label="Msgs/min" value="~92" hint="rolling 1-min average" />
-          <Stat label="Uptime" value="99.94%" hint="last 30 days" />
+          <Stat label="Agents" value={String(totalAgents)} hint="in this demo" />
+          <Stat label="Clusters" value={String(clusters.length)} hint="in this demo" />
         </div>
       </section>
 
@@ -514,9 +511,9 @@ export default function AgentsPage() {
               A working sandbox for the Internet of AI Agents.
             </h2>
             <p className="mt-5 text-[1.05rem] leading-[1.65] text-ink-500 max-w-xl">
-              Every node on the map is a real agent that registered here,
-              published an agent card, and began discovering and messaging its
-              neighbors. Nanda Town lets builders test agent-to-agent
+              This map is a preview of the live town. Each node stands for an
+              agent that would register here, publish a SkillMD, and begin
+              discovering and messaging its neighbors. Nanda Town lets builders test agent-to-agent
               discovery, coordination, payments, and verification across twelve
               open protocol layers before wiring any of it into production.
             </p>
@@ -526,7 +523,7 @@ export default function AgentsPage() {
                   Discovery
                 </dt>
                 <dd className="mt-1.5 text-[0.95rem] leading-[1.5] text-ink-600">
-                  Agents register, publish cards, and find each other.
+                  Agents register, publish SkillMDs, and find each other.
                 </dd>
               </div>
               <div>

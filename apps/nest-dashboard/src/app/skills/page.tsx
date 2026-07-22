@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "SkillMD — Nanda Town",
   description:
-    "Teach an OpenClaw agent a new trick. Write a SkillMD, host your endpoints, and submit it here.",
+    "Teach an agent a new trick. Write a SkillMD, host your endpoints, and submit it here.",
 };
 
 /* ------------------------------------------------------------------ */
@@ -36,6 +36,12 @@ function Section({
       {children}
     </section>
   );
+}
+
+/* SkillMDs submitted by the hackathon deadline compete for the award. */
+const NANDAHACK_DEADLINE_MS = Date.parse("2026-07-11T18:00:00Z"); // Jul 11, 2 PM ET
+function isNandaHackEntry(skill: Skill): boolean {
+  return Date.parse(skill.created_at) <= NANDAHACK_DEADLINE_MS;
 }
 
 const TYPE_LABEL: Record<Skill["source_type"], string> = {
@@ -92,13 +98,13 @@ export default async function SkillsPage({
         <div className="relative mx-auto max-w-[1240px] px-6 pt-20 pb-16 sm:px-10 md:pt-24">
           <div className="mb-8 flex items-center gap-3">
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-rust" />
-            <span className="eyebrow">SkillMD · for OpenClaw agents</span>
+            <span className="eyebrow">SkillMD · for Nanda Town agents</span>
           </div>
           <h1 className="max-w-3xl font-display text-[clamp(2.4rem,5.5vw,4.2rem)] leading-[1.04] tracking-[-0.018em] text-ink-900">
             Teach an agent a <span className="italic text-ink-700">new trick.</span>
           </h1>
           <p className="mt-7 max-w-xl text-[1.12rem] leading-[1.55] text-ink-500">
-            A SkillMD is a short Markdown file that tells an OpenClaw agent how
+            A SkillMD is a short Markdown file that tells any agent in Nanda Town how
             to use your API. Write the steps, put your endpoints online, and
             drop the file in below.
           </p>
@@ -135,13 +141,17 @@ export default async function SkillsPage({
                   Audience Choice Award · $1,000 · SkillMD only
                 </p>
                 <p className="mt-2.5 text-[0.95rem] leading-[1.6] text-ink-600">
-                  This applies to the SkillMD submissions on this page only —
-                  your{" "}
+                  Voting has been extended to run a full month, through August 11,
+                  2026. The award covers the submissions marked{" "}
+                  <span className="font-semibold text-rust">NandaHack entry</span>,
+                  the SkillMDs submitted by the July 11 hackathon deadline.
+                  Newer submissions join the registry but are not in the award
+                  pool. It is separate from your{" "}
                   <span className="font-semibold text-ink-900">
                     Phase 2 submission
                   </span>
-                  , which counts for 80% of your score. Heart your favorites
-                  below; the SkillMD here with the most likes wins the Audience
+                  , which counted for 80% of your score. Heart your favorites
+                  below; the NandaHack entry with the most likes wins the Audience
                   Choice Award and{" "}
                   <span className="font-semibold text-ink-900">$1,000</span>.
                   Anyone can see the vote counts and who cast them; liking needs
@@ -227,6 +237,11 @@ function SkillCard({
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {isNandaHackEntry(skill) && (
+            <span className="rounded-full border border-rust/40 bg-rust/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-rust">
+              NandaHack entry
+            </span>
+          )}
           <span className="rounded-full border border-cream-400 bg-cream-200 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
             {TYPE_LABEL[skill.source_type]}
           </span>

@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "PR Gallery — Nanda Town",
   description:
-    "Every pull request on projnanda/nandatown, live from GitHub: the twelve protocol layers plus Other, with merged PRs landing in their layer the moment they merge.",
+    "Every open and merged pull request on projnanda/nandatown, live from GitHub: the twelve protocol layers plus Other, with merged PRs landing in their layer the moment they merge.",
 };
 
 export default async function PRGalleryPage() {
@@ -50,7 +50,7 @@ export default async function PRGalleryPage() {
               <span className="italic text-ink-700">gallery</span>.
             </h1>
             <p className="animate-fade-in stagger-2 text-[1.05rem] leading-[1.6] text-ink-500 max-w-md">
-              Every pull request on projnanda/nandatown, synced
+              Every open and merged pull request on projnanda/nandatown, synced
               straight from GitHub. Twelve protocol layers plus Other &mdash;
               merged PRs land in their layer the moment they merge.
             </p>

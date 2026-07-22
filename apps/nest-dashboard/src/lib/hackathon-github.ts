@@ -142,6 +142,13 @@ export function extractHandleAndTheme(
 // title (PR #18, a merged "versioned comms layer").
 const COMMS_PLURAL = /\bcomms\b/;
 
+/* Manual corrections where keyword matching lands a PR in the wrong layer. */
+const LAYER_OVERRIDES: Record<number, ReturnType<typeof classifyLayer>> = {
+  56: "auth", // delegatable capability tokens implement the auth problem
+  16: "other", // dashboard UI build, not a trust-layer protocol
+  95: "other", // core engine metrics fix
+};
+
 export function classifyLayer(
   theme: string | null,
   title = "",
@@ -289,7 +296,7 @@ function toSubmission(pr: GitHubPR): Submission {
     // Capped so the whole cached dataset stays far below the cache entry
     // ceiling; the detail page links to GitHub for the untruncated body.
     body_markdown: body.length > BODY_CAP ? body.slice(0, BODY_CAP) + "\n\n…" : body,
-    layer: classifyLayer(theme, pr.title, body),
+    layer: LAYER_OVERRIDES[pr.number] ?? classifyLayer(theme, pr.title, body),
     branch,
     author,
     pr_url: pr.html_url,
