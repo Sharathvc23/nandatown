@@ -153,9 +153,9 @@ function Sidebar({
 
       <aside
         className={`
-          fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-72 transform border-r border-cream-400/70
+          fixed top-14 left-0 z-50 h-[calc(100vh-3.5rem)] w-72 transform border-r border-cream-400/70
           bg-cream-100/95 backdrop-blur-md transition-transform duration-300 ease-in-out
-          lg:z-10 lg:translate-x-0 lg:bg-transparent
+          lg:sticky lg:top-0 lg:z-10 lg:h-screen lg:w-72 lg:shrink-0 lg:translate-x-0 lg:bg-transparent lg:transition-none
           ${open ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
@@ -322,14 +322,15 @@ export default function DocsPage() {
         Contents
       </button>
 
-      <Sidebar
-        activeId={activeId}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <div className="lg:flex lg:items-start">
+        <Sidebar
+          activeId={activeId}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
 
-      {/* Main content */}
-      <div className="lg:ml-72">
+        {/* Main content */}
+        <div className="lg:min-w-0 lg:flex-1">
         <div className="mx-auto max-w-3xl px-6 pb-24 pt-10 lg:px-12">
           {/* Overview */}
           <Section id="overview" title="Overview">
@@ -1389,6 +1390,7 @@ my_decay = "my_trust.plugin:DecayTrust"`}
               </a>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

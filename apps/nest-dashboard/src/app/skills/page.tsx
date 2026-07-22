@@ -9,9 +9,9 @@ import { SubmitForm } from "./submit-form";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "SkillMD — Nanda Town",
+  title: "Agent Services (SkillMDs) — Nanda Town",
   description:
-    "Teach an agent a new trick. Write a SkillMD, host your endpoints, and submit it here.",
+    "Teach an agent how to execute your service. Write a SkillMD, host your endpoints, and submit it here.",
 };
 
 /* ------------------------------------------------------------------ */
@@ -98,15 +98,17 @@ export default async function SkillsPage({
         <div className="relative mx-auto max-w-[1240px] px-6 pt-20 pb-16 sm:px-10 md:pt-24">
           <div className="mb-8 flex items-center gap-3">
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-rust" />
-            <span className="eyebrow">SkillMD · for Nanda Town agents</span>
+            <span className="eyebrow">Agent services · SkillMDs</span>
           </div>
           <h1 className="max-w-3xl font-display text-[clamp(2.4rem,5.5vw,4.2rem)] leading-[1.04] tracking-[-0.018em] text-ink-900">
-            Teach an agent a <span className="italic text-ink-700">new trick.</span>
+            Teach an agent how to{' '}
+            <span className="italic text-ink-700">execute your service.</span>
           </h1>
           <p className="mt-7 max-w-xl text-[1.12rem] leading-[1.55] text-ink-500">
-            A SkillMD is a short Markdown file that tells any agent in Nanda Town how
-            to use your API. Write the steps, put your endpoints online, and
-            drop the file in below.
+            A SkillMD is a short Markdown file that tells any agent in Nanda
+            Town how to use your API, which connects to your service, so the
+            agent can execute that service successfully. Write the steps, put
+            your endpoints online, and drop the file in below.
           </p>
         </div>
       </section>

@@ -57,7 +57,7 @@ export default async function SubmissionPage({
               href="/prgallery"
               className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
             >
-              ← PR Gallery
+              ← Protocols + Plugins
             </Link>
             {layer && (
               <Link

@@ -14,8 +14,8 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { href: "/prgallery", label: "PR Gallery" },
-  { href: "/skills", label: "Skills Registry" },
+  { href: "/prgallery", label: "Protocols + Plugins (PRs)" },
+  { href: "/skills", label: "Agent Services (SkillMDs)" },
   { href: "/contribute", label: "Contribute" },
   { href: "/docs", label: "Docs" },
   { href: "/experiments", label: "Experiments" },

@@ -18,7 +18,7 @@ import { EmptyState, SubmissionCard } from "@/components/hackathon-card";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "PR Gallery — Nanda Town",
+  title: "Protocols + Plugins (PRs) — Nanda Town",
   description:
     "Every open and merged pull request on projnanda/nandatown, live from GitHub: the twelve protocol layers plus Other, with merged PRs landing in their layer the moment they merge.",
 };
@@ -45,9 +45,9 @@ export default async function PRGalleryPage() {
 
           <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-end">
             <h1 className="font-display animate-fade-in stagger-1 text-[clamp(2.4rem,5.4vw,4.2rem)] leading-[1.04] tracking-tight text-ink-900">
-              The PR
+              Protocols +
               <br />
-              <span className="italic text-ink-700">gallery</span>.
+              <span className="italic text-ink-700">plugins</span>.
             </h1>
             <p className="animate-fade-in stagger-2 text-[1.05rem] leading-[1.6] text-ink-500 max-w-md">
               Every open and merged pull request on projnanda/nandatown, synced

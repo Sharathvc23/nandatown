@@ -14,7 +14,7 @@ import { loadDataset } from "@/lib/hackathon";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "PR Gallery layers — Nanda Town",
+  title: "Protocol layers — Nanda Town",
   description:
     "Browse every pull request by the 12 Nanda Town protocol layers.",
 };
@@ -31,7 +31,7 @@ export default async function GalleryLayersPage() {
               href="/prgallery"
               className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-300 hover:text-ink-900"
             >
-              ← PR Gallery
+              ← Protocols + Plugins
             </Link>
           </div>
 

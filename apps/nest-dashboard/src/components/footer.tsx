@@ -43,7 +43,7 @@ export function Footer() {
           </div>
 
           <FooterColumn title="Platform">
-            <FooterLink href="/prgallery">PR Gallery</FooterLink>
+            <FooterLink href="/prgallery">Protocols + Plugins (PRs)</FooterLink>
             <FooterLink href="/contribute">Contribute</FooterLink>
             <FooterLink href="/experiments">Experiments</FooterLink>
             <FooterLink href="/leaderboard">Leaderboard</FooterLink>
