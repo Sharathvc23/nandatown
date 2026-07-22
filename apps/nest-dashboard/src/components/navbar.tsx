@@ -20,7 +20,7 @@ const items: NavItem[] = [
   { href: "/leaderboard", label: "Leaderboard" },
   {
     href: "https://nandahack.media.mit.edu",
-    label: "NandaHack",
+    label: "NandaHack x HCLTech",
     external: true,
     children: [
       { href: "/skills", label: "Skills Registry (NandaHack)" },

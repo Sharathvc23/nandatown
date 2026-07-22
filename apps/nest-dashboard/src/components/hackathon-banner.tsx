@@ -16,8 +16,8 @@ export function HackathonBanner() {
             The submission with the most likes wins the{" "}
             <span className="font-semibold text-cream-50">
               $1,000 Audience Choice Award
-            </span>
-            .
+            </span>{" "}
+            for the NandaHack x HCLTech hackathon.
           </span>
         </span>
         <span className="flex items-center gap-4">
