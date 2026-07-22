@@ -23,9 +23,8 @@ const items: NavItem[] = [
   { href: "/visualizer", label: "Visualizer" },
   { href: "/agents", label: "Agents (demo)" },
   {
-    href: "https://nandahack.media.mit.edu",
+    href: "",
     label: "NandaHacks",
-    external: true,
     children: [
       {
         href: "https://nandahack.media.mit.edu",
@@ -55,7 +54,9 @@ function NavList({
           (pathname === item.href || pathname.startsWith(item.href + "/"));
         return (
           <li key={item.label}>
-            {item.external ? (
+            {!item.href ? (
+              <span className={linkCls(false)}>{item.label}</span>
+            ) : item.external ? (
               <a href={item.href} className={linkCls(false)} onClick={onNavigate}>
                 {item.label}
               </a>
