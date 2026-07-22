@@ -15,8 +15,6 @@ type NavItem = {
 
 const items: NavItem[] = [
   { href: "/prgallery", label: "Protocols + Plugins (PRs)" },
-  { href: "/skills", label: "Agent Services (SkillMDs)" },
-  { href: "/contribute", label: "Contribute" },
   { href: "/docs", label: "Docs" },
   { href: "/experiments", label: "Experiments" },
   { href: "/leaderboard", label: "Leaderboard" },
@@ -30,6 +28,7 @@ const items: NavItem[] = [
         href: "https://nandahack.media.mit.edu",
         label: "NandaHack x HCLTech",
       },
+      { href: "/skills", label: "Skills Registry" },
     ],
   },
 ];

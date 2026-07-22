@@ -44,7 +44,6 @@ export function Footer() {
 
           <FooterColumn title="Platform">
             <FooterLink href="/prgallery">Protocols + Plugins (PRs)</FooterLink>
-            <FooterLink href="/contribute">Contribute</FooterLink>
             <FooterLink href="/experiments">Experiments</FooterLink>
             <FooterLink href="/leaderboard">Leaderboard</FooterLink>
             <FooterLink href="/visualizer">Visualizer</FooterLink>
@@ -52,6 +51,7 @@ export function Footer() {
           </FooterColumn>
 
           <FooterColumn title="NandaHack x HCLTech">
+            <FooterLink href="/skills">Skills Registry</FooterLink>
             <FooterLink href="/skills">Vote on SkillMDs</FooterLink>
             <FooterLink href={hackathonEvent.officialUrl} external>
               Official site

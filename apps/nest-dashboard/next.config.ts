@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/hackathon", destination: "/prgallery", permanent: true },
       { source: "/summit", destination: "/", permanent: false },
+      { source: "/contribute", destination: "/", permanent: false },
       {
         source: "/hackathon/:path*",
         destination: "/prgallery/:path*",
