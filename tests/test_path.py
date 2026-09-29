@@ -938,3 +938,100 @@ def test_generated_rerun_survives_a_real_shell(tmp_path, via_index):
     assert argv == ["test-agent", *locator,
                     "--path-profile", "a2a-quote-intent@0.2",
                     "--pin-card-digest", pin]
+
+
+# ── a subject that refuses because it requires credentials ──────────────────
+#
+# Town sends no credentials on the path route. When the subject's own card
+# declares a security scheme, its refusal does not separate a broken agent from
+# one enforcing what it published, and the report must not call it broken.
+#
+# The load-bearing test is test_a_refusal_without_declared_security_still_fails:
+# without it, this change would excuse every refusal rather than the ones the
+# subject warned about.
+
+
+def refusing_client(code=-32004, message="requires a verified caller",
+                    security=True):
+    """An A2A service that refuses the write, optionally advertising why."""
+    def handler(request):
+        if request.method == "GET":
+            card = build_agent_card(SUBJECT)
+            if security:
+                card = dict(
+                    card,
+                    security=[{"agentSignature": []}],
+                    securitySchemes={"agentSignature": {
+                        "type": "apiKey", "in": "header",
+                        "name": "X-Agent-Signature"}},
+                )
+            return httpx.Response(200, json=card)
+        return httpx.Response(200, json={
+            "jsonrpc": "2.0", "id": 1,
+            "error": {"code": code, "message": message}})
+
+    return httpx.Client(base_url=SUBJECT,
+                        transport=httpx.MockTransport(handler))
+
+
+def test_a_declared_refusal_is_not_tested_rather_than_failed(tmp_path):
+    bundle_dir, result = run_path_test(SUBJECT, str(tmp_path),
+                                       http=refusing_client())
+    s = statuses(result)
+    assert s["agent_card_retrieval"] == "passed", s
+    assert s["protocol_invocation"] == "not_tested", s
+    assert result.verdict != "failed", result.verdict
+
+    note = stage(result, "protocol_invocation").note
+    assert "-32004" in note
+    assert "agentSignature" in note
+    assert "sent no credentials" in note
+    assert verify_bundle(bundle_dir) == []
+
+    report = render_report(load_bundle(bundle_dir))
+    assert "First broken stage: protocol_invocation" not in report, (
+        "a subject enforcing its own published scheme was called broken")
+
+
+def test_a_refusal_without_declared_security_still_fails(tmp_path):
+    """The control. A card that promises no security scheme has given Town no
+    reason to treat its refusal as anything but a failure, and excusing it
+    would make the stage unable to fail at all."""
+    _, result = run_path_test(SUBJECT, str(tmp_path),
+                              http=refusing_client(security=False))
+    s = statuses(result)
+    assert s["protocol_invocation"] == "failed", s
+    assert stage(result, "protocol_invocation").note == "a2a_rpc_error"
+    assert result.verdict == "failed"
+
+
+def test_the_refusal_carries_the_code_and_message_into_the_evidence(tmp_path):
+    """Every error used to collapse to the bare string `a2a_rpc_error`, so a
+    refusal and a crash were indistinguishable downstream."""
+    bundle_dir, _ = run_path_test(SUBJECT, str(tmp_path),
+                                  http=refusing_client(
+                                      code=-32099, message="no entry"))
+    events = [json.loads(line) for line
+              in (open(os.path.join(bundle_dir, "events.jsonl"))
+                  .read().splitlines())]
+    exchange = [e for e in events if e["kind"] == "protocol_exchange"][0]
+    assert exchange["detail"]["rpc_code"] == -32099
+    assert exchange["detail"]["rpc_message"] == "no entry"
+    assert exchange["detail"]["town_sent_credentials"] is False
+    assert exchange["detail"]["subject_declares_security"] == [
+        "agentSignature"]
+    assert verify_bundle(bundle_dir) == []
+
+
+def test_declared_security_reads_both_card_fields_without_duplicating():
+    from nandatown.path_runner import declared_security
+
+    assert declared_security({}) == []
+    assert declared_security({"securitySchemes": {"a": {}, "b": {}}}) == [
+        "a", "b"]
+    assert declared_security({"security": [{"a": []}]}) == ["a"]
+    assert declared_security({"securitySchemes": {"a": {}},
+                              "security": [{"a": []}]}) == ["a"]
+    # A hostile card must not crash the run.
+    assert declared_security({"security": "not-a-list",
+                              "securitySchemes": 7}) == []

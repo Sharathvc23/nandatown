@@ -295,6 +295,29 @@ class _Recorder:
             "action": action, "payload": scrub(payload, self.scrubber)})
 
 
+def declared_security(card: dict[str, Any]) -> list[str]:
+    """The security scheme names an agent card advertises, in card order.
+
+    A card that carries `security` or `securitySchemes` has announced that it
+    requires credentials. Town sends none on the path route, so a refusal from
+    such a subject is not evidence that the subject is broken — it may be the
+    subject enforcing exactly what it published. Read here so the run can say
+    so instead of guessing at error codes, which would be a rule about one
+    implementation rather than about the protocol.
+    """
+    names: list[str] = []
+    schemes = card.get("securitySchemes")
+    if isinstance(schemes, dict):
+        names.extend(str(name) for name in schemes)
+    requirements = card.get("security")
+    if isinstance(requirements, list):
+        for requirement in requirements:
+            if isinstance(requirement, dict):
+                names.extend(str(name) for name in requirement)
+    seen: set[str] = set()
+    return [n for n in names if not (n in seen or seen.add(n))]
+
+
 def _is_endpoint_url(value: object) -> bool:
     """Whether httpx parses value as an absolute http(s) URL with a host.
 
@@ -580,10 +603,23 @@ def run_path_test(subject_url: str | None, out_dir: str,
                         "town-requester", "fulfillment_observed",
                         order_id, detail)
                 except (ValueError, httpx.HTTPError) as exc:
+                    failure = {"attempt": attempt, "ok": False,
+                               "reason": str(exc)}
+                    code = getattr(exc, "code", None)
+                    if code is not None:
+                        failure["rpc_code"] = _echoed(code)
+                        failure["rpc_message"] = _echoed(
+                            getattr(exc, "message", None))
+                    # Disclosed, never inferred. The card's own declaration is
+                    # recorded beside the refusal so a reader weighs both,
+                    # rather than Town deciding from an error code what a
+                    # refusal meant.
+                    declared = declared_security(card)
+                    if declared:
+                        failure["subject_declares_security"] = declared
+                        failure["town_sent_credentials"] = False
                     recorder.emit("town-requester", "protocol_exchange",
-                                  order_id,
-                                  {"attempt": attempt, "ok": False,
-                                   "reason": str(exc)})
+                                  order_id, failure)
                     break
                 except Exception as exc:
                     # Town's own driver misbehaved. That is Town's fault
@@ -763,6 +799,25 @@ def evaluate_path(profile: PathProfile, run_id: str,
                 evidence=[first_exchange[0].event_id],
                 note=f"task {detail.get('task_id')} state"
                      f" {detail.get('state')}"))
+    elif first_exchange and first_exchange[0].detail.get(
+            "subject_declares_security"):
+        # The subject published that it requires credentials and this run sent
+        # none, so its refusal does not separate a broken agent from one
+        # enforcing what it advertised. Town's own driver errors already carry
+        # the rule that a failure which is not the subject's fault must not
+        # read as one; this is the same rule pointed the other way.
+        detail = first_exchange[0].detail
+        schemes = ", ".join(detail["subject_declares_security"])
+        code = detail.get("rpc_code")
+        stages.append(StageResult(
+            name="protocol_invocation", status="not_tested",
+            evidence=[first_exchange[0].event_id],
+            note="the subject refused"
+                 + (f" (rpc code {code})" if code is not None else "")
+                 + f" and its card declares security: {schemes}."
+                   " This run sent no credentials, so the refusal does not"
+                   " separate a broken agent from one enforcing what it"
+                   " published"))
     elif first_exchange:
         stages.append(StageResult(
             name="protocol_invocation", status="failed",

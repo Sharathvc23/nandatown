@@ -165,6 +165,22 @@ def fetch_card(base_url: str,
     raise ValueError("a2a_card_missing")
 
 
+class A2ARpcError(ValueError):
+    """A JSON-RPC error member, kept whole rather than flattened.
+
+    Every error used to collapse to the bare string ``a2a_rpc_error``, which
+    made a subject that refused an unauthenticated write indistinguishable
+    from one that crashed. The code and message are carried as attributes so
+    a caller can tell those apart; ``str()`` is unchanged, so existing
+    handlers, evidence bundles and report notes read exactly as before.
+    """
+
+    def __init__(self, code: object = None, message: object = None):
+        self.code = code
+        self.message = message
+        super().__init__("a2a_rpc_error")
+
+
 def send_message(base_url: str, text: str,
                  http: httpx.Client | None = None, *,
                  max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
@@ -182,7 +198,10 @@ def send_message(base_url: str, text: str,
                             timeout_seconds=timeout_seconds,
                             success_statuses=range(200, 300))
     if "error" in payload:
-        raise ValueError("a2a_rpc_error")
+        error = payload["error"]
+        raise A2ARpcError(
+            error.get("code") if isinstance(error, dict) else None,
+            error.get("message") if isinstance(error, dict) else None)
     if not isinstance(payload.get("result"), dict):
         raise ValueError("a2a_rpc_invalid_result")
     return payload["result"]
