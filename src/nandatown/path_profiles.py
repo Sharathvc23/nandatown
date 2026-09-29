@@ -113,6 +113,32 @@ PATH_PROFILES: dict[str, PathProfile] = {
                 "max_response_bytes": 1_048_576},
         evaluator=STRICT_PATH_EVALUATOR,
     ),
+    # An A2A booking, judged on the fields the profile names rather than on a
+    # price. Its controlled condition is the invariant the capability turns on:
+    # a slot is an idempotency key, so the identical intent delivered twice must
+    # return the same booking and not a second one. `state: held` is what one
+    # principal's request produces when the booking names two — a booking with
+    # one signature is not joint consent, and a profile that expected
+    # `confirmed` here would be asserting the opposite of the property.
+    "a2a-booking-intent@0.1": PathProfile(
+        profile_id="a2a-booking-intent",
+        version="0.1",
+        protocol="a2a",
+        capability="booking",
+        request={"skill": "venue.hold",
+                 "resource": "town-reference-table",
+                 "start": "2026-12-24T19:00:00Z",
+                 "party": "did:key:z6MkjTownReferenceBuyerAAAAAAAAAAAAAAAAAAAAAA",
+                 "principals": ["did:key:z6MkjTownReferenceBuyerAAAAAAAAAAAAAAAAAAAAAA",
+                                "did:key:z6MkjTownReferenceHostBBBBBBBBBBBBBBBBBBBBBB"]},
+        expected={"fields": {"resource": "town-reference-table",
+                             "start": "2026-12-24T19:00:00Z",
+                             "state": "held"},
+                  "terminal_fulfillments": 1},
+        controlled_condition="duplicate_request",
+        limits={"timeout_seconds": 15.0, "max_response_bytes": 1_048_576},
+        evaluator=STRICT_PATH_EVALUATOR,
+    ),
 }
 
 DEFAULT_PATH_PROFILE = "a2a-capability-fulfillment@0.3"

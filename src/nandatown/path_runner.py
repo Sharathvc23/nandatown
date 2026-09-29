@@ -218,8 +218,52 @@ def _quote_intent_errors(profile: PathProfile, detail: dict[str, Any]) -> list[s
     return errors
 
 
+def _declared_field_errors(profile: PathProfile,
+                           detail: dict[str, Any]) -> list[str] | None:
+    """Compare the fields a profile names, or None when it names none.
+
+    Lets a profile describe the semantics of a capability Town ships no
+    evaluator for, without a bespoke evaluator per capability. The comparison is
+    exact and type-checked for the same reason the quote comparison is: JSON
+    booleans and floats are not integers, and "3" is not 3.
+
+    Returning None rather than an empty list is the distinction that matters —
+    "this profile names no fields" and "this profile names fields and they all
+    matched" must not collapse, or a profile with no field list would pass a
+    check it never asked for.
+    """
+    wanted = profile.expected.get("fields")
+    if not isinstance(wanted, dict):
+        return None
+    observed = detail.get("fields")
+    if not isinstance(observed, dict):
+        observed = {}
+    errors = []
+    for field, expected in wanted.items():
+        value = observed.get(field)
+        if type(value) is not type(expected) or value != expected:
+            errors.append(f"{field}: expected {expected!r}, observed {value!r}")
+    return errors
+
+
 def _semantic_fulfillment_stage(
         profile: PathProfile, fulfillment: TownEvent) -> StageResult:
+    """Did the subject produce the result this profile asked for, for this order?
+
+    Three ways a profile can say what "the required result" means, in the order
+    they are consulted:
+
+    * ``expected.fields`` — the fields the profile names, compared exactly.
+      A capability with no price needs this: the generic check below compares
+      ``total_cents``, and a profile that has none would pass by both sides
+      being absent, which is a stage that asserts nothing while reading as a
+      result.
+    * a quote-intent evaluator — the item terms and a budget.
+    * otherwise ``total_cents``, the original check, unchanged.
+
+    ``request_ok`` is separate from all three: a correct result for somebody
+    else's order is not a correct result.
+    """
     detail = fulfillment.detail
     observed_total = detail.get("total_cents")
     expected_request_id = fulfillment.subject
@@ -228,29 +272,39 @@ def _semantic_fulfillment_stage(
                   and bool(expected_request_id)
                   and isinstance(observed_request_id, str)
                   and observed_request_id == expected_request_id)
+
+    declared = _declared_field_errors(profile, detail)
     quote_intent = _quote_intent_semantics(profile)
-    errors = _quote_intent_errors(profile, detail) if quote_intent else []
     expected_total = profile.expected.get("total_cents")
-    result_ok = not errors if quote_intent else observed_total == expected_total
+
+    if declared is not None:
+        errors, result_ok = declared, not declared
+        passed_note = ("the result matches every field the profile names: "
+                       + ", ".join(sorted(profile.expected["fields"])))
+        failed_note = "the result does not match the profile: " + "; ".join(errors)
+    elif quote_intent:
+        errors = _quote_intent_errors(profile, detail)
+        result_ok = not errors
+        passed_note = ("observed quote matches the item terms and budget;"
+                       f" total_cents {observed_total}; no purchase or delivery"
+                       " tested")
+        failed_note = ("quote does not match the selected profile: "
+                       + "; ".join(errors))
+    else:
+        result_ok = observed_total == expected_total
+        passed_note = f"exactly one fulfillment, total {observed_total}"
+        failed_note = ("protocol passed but the result is wrong:"
+                       f" expected total {expected_total}, observed {observed_total}")
+
     if result_ok and request_ok:
-        return StageResult(
-            name="semantic_result", status="passed",
-            evidence=[fulfillment.event_id],
-            note=(f"observed quote matches the item terms and budget;"
-                  f" total_cents {observed_total}; no purchase or delivery"
-                  " tested"
-                  if quote_intent else
-                  f"exactly one fulfillment, total {observed_total}"))
-    note = ("quote does not match the selected profile: " + "; ".join(errors)
-            if quote_intent else
-            f"protocol passed but the result is wrong:"
-            f" expected total {expected_total}, observed {observed_total}")
+        return StageResult(name="semantic_result", status="passed",
+                           evidence=[fulfillment.event_id], note=passed_note)
+    note = passed_note if result_ok else failed_note
     if not request_ok:
         note += (f"; expected request_id {expected_request_id!r},"
                  f" observed request_id {observed_request_id!r}")
-    return StageResult(
-        name="semantic_result", status="failed",
-        evidence=[fulfillment.event_id], note=note)
+    return StageResult(name="semantic_result", status="failed",
+                       evidence=[fulfillment.event_id], note=note)
 
 
 STAGE_ORDER = ["resolution", "agent_card_retrieval",
@@ -594,6 +648,15 @@ def run_path_test(subject_url: str | None, out_dir: str,
                         "total_cents": _echoed(fulfillment.get("total_cents")),
                         "request_id": _echoed(fulfillment.get("request_id")),
                         "content_digest": content_digest}
+                    # A profile may name the fields its capability is judged
+                    # on. Recorded as observed, absences included, so the
+                    # evaluator compares what the subject said and never fills
+                    # an omission from the request.
+                    wanted_fields = profile.expected.get("fields")
+                    if isinstance(wanted_fields, dict):
+                        detail["fields"] = {
+                            field: _echoed(fulfillment.get(field))
+                            for field in wanted_fields}
                     if _quote_intent_semantics(profile):
                         detail["quote"] = {
                             field: _echoed(fulfillment[field])
