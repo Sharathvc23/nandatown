@@ -1035,3 +1035,127 @@ def test_declared_security_reads_both_card_fields_without_duplicating():
     # A hostile card must not crash the run.
     assert declared_security({"security": "not-a-list",
                               "securitySchemes": 7}) == []
+
+
+# ── a profile that names the fields its capability is judged on ─────────────
+#
+# Before `expected.fields`, the generic semantic check compared
+# `expected.total_cents` with the observed one — both absent for any capability
+# that has no total — and `None == None` passed. A stage that asserts nothing
+# while reading as a result is worse than no stage, so these pin that it now
+# asserts something, and that a profile which names no fields is unaffected.
+
+FIELDS_PROFILE = "test-declared-fields@0.1"
+NO_FIELDS_PROFILE = "test-no-declared-fields@0.1"
+
+
+@pytest.fixture
+def declared_field_profiles():
+    """Two profiles differing only in whether they name fields."""
+    from nandatown.path_profiles import STRICT_PATH_EVALUATOR, PathProfile
+
+    common = dict(protocol="a2a", capability="record",
+                  request={"skill": "record.read"},
+                  controlled_condition="duplicate_request",
+                  limits={"timeout_seconds": 15.0,
+                          "max_response_bytes": 1_048_576},
+                  evaluator=STRICT_PATH_EVALUATOR)
+    added = {
+        FIELDS_PROFILE: PathProfile(
+            profile_id="test-declared-fields", version="0.1",
+            expected={"fields": {"kind": "record", "count": 3},
+                      "terminal_fulfillments": 1}, **common),
+        NO_FIELDS_PROFILE: PathProfile(
+            profile_id="test-no-declared-fields", version="0.1",
+            expected={"terminal_fulfillments": 1}, **common),
+    }
+    PATH_PROFILES.update(added)
+    try:
+        yield
+    finally:
+        for ref in added:
+            PATH_PROFILES.pop(ref, None)
+
+
+def record_client(fulfillment):
+    """An A2A service returning one completed task carrying `fulfillment`."""
+    def handler(request):
+        if request.method == "GET":
+            return httpx.Response(200, json=build_agent_card(SUBJECT))
+        order = json.loads(
+            json.loads(request.content)["params"]["message"]["parts"][0]["text"])
+        body = dict(fulfillment, request_id=order["request_id"])
+        task = {"id": "task-1", "kind": "task",
+                "status": {"state": "completed"},
+                "artifacts": [{"parts": [{"kind": "text",
+                                          "text": json.dumps(body)}]}]}
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1,
+                                         "result": task})
+
+    return httpx.Client(base_url=SUBJECT,
+                        transport=httpx.MockTransport(handler))
+
+
+def test_declared_fields_pass_when_every_one_matches(tmp_path,
+                                                     declared_field_profiles):
+    _, result = run_path_test(SUBJECT, str(tmp_path), FIELDS_PROFILE,
+                              http=record_client({"kind": "record",
+                                                  "count": 3}))
+    semantic = stage(result, "semantic_result")
+    assert semantic.status == "passed", semantic.note
+    # The note says what was actually checked, rather than reporting a total
+    # for a capability that has none.
+    assert "kind" in semantic.note and "count" in semantic.note
+    assert result.verdict == "passed"
+
+
+def test_a_differing_field_fails_and_names_itself(tmp_path,
+                                                  declared_field_profiles):
+    _, result = run_path_test(SUBJECT, str(tmp_path), FIELDS_PROFILE,
+                              http=record_client({"kind": "receipt",
+                                                  "count": 3}))
+    semantic = stage(result, "semantic_result")
+    assert semantic.status == "failed"
+    assert "kind" in semantic.note
+    assert "'record'" in semantic.note and "'receipt'" in semantic.note
+
+
+def test_a_field_comparison_is_type_exact(tmp_path, declared_field_profiles):
+    """JSON booleans and floats are not integers, and "3" is not 3."""
+    _, result = run_path_test(SUBJECT, str(tmp_path), FIELDS_PROFILE,
+                              http=record_client({"kind": "record",
+                                                  "count": "3"}))
+    assert stage(result, "semantic_result").status == "failed"
+
+
+def test_an_absent_field_is_not_filled_from_the_request(tmp_path,
+                                                        declared_field_profiles):
+    """The subject said nothing about `count`. Reading the request to supply it
+    would let a profile pass on a value the subject never returned."""
+    _, result = run_path_test(SUBJECT, str(tmp_path), FIELDS_PROFILE,
+                              http=record_client({"kind": "record"}))
+    semantic = stage(result, "semantic_result")
+    assert semantic.status == "failed"
+    assert "None" in semantic.note
+
+
+def test_a_profile_naming_no_fields_is_unaffected(tmp_path,
+                                                  declared_field_profiles):
+    """"names no fields" and "names fields and they all matched" must not
+    collapse, or a profile would pass a check it never asked for."""
+    _, result = run_path_test(SUBJECT, str(tmp_path), NO_FIELDS_PROFILE,
+                              http=record_client({"anything": "at all"}))
+    assert stage(result, "semantic_result").status == "passed"
+    assert result.verdict == "passed"
+
+
+@pytest.mark.parametrize("ref", ["a2a-booking-intent@0.1",
+                                 "a2a-orchestration-record@0.1"])
+def test_the_shipped_profiles_are_registered_and_frozen(ref):
+    profile = get_path_profile(ref)
+    assert profile.ref == ref
+    assert profile.fingerprint().startswith("sha256:")
+    # A result binds to the exact profile version it ran under, so a profile
+    # that could be edited in place would unbind every result citing it.
+    with pytest.raises(Exception):
+        profile.version = "0.2"
