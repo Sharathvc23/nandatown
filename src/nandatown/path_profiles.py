@@ -139,6 +139,31 @@ PATH_PROFILES: dict[str, PathProfile] = {
         limits={"timeout_seconds": 15.0, "max_response_bytes": 1_048_576},
         evaluator=STRICT_PATH_EVALUATOR,
     ),
+    # An ORCHESTRATOR, not a seller. The capability under test is not producing
+    # a quote or holding a slot — it is handing back the record of what it did,
+    # and doing so without doing it again.
+    #
+    # `concierge.last_run` is the read. The agent's other skill runs a live
+    # scenario that books a real table, so a duplicate-request profile pointed at
+    # it would be asserting that a booking agent double-books; this profile
+    # deliberately tests the surface where repetition is supposed to be free.
+    #
+    # `terminal_fulfillments: 1` and the digest match are the whole claim: the
+    # same logical request delivered twice must come back byte-identical, which
+    # is what distinguishes a record from a re-run.
+    "a2a-orchestration-record@0.1": PathProfile(
+        profile_id="a2a-orchestration-record",
+        version="0.1",
+        protocol="a2a",
+        capability="orchestration-record",
+        request={"skill": "concierge.last_run"},
+        expected={"fields": {"skill": "concierge.last_run",
+                             "kind": "receipt-chain"},
+                  "terminal_fulfillments": 1},
+        controlled_condition="duplicate_request",
+        limits={"timeout_seconds": 20.0, "max_response_bytes": 4_194_304},
+        evaluator=STRICT_PATH_EVALUATOR,
+    ),
 }
 
 DEFAULT_PATH_PROFILE = "a2a-capability-fulfillment@0.3"
